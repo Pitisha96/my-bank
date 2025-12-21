@@ -1,0 +1,59 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-accounts-table
+      author: pitosha96
+      context: dev
+
+      preConditions:
+      - dbms:
+          type: postgresql
+      - not:
+          tableExists:
+            tableName: accounts
+
+      changes:
+        - createTable:
+            tableName: accounts
+            columns:
+              - column:
+                  name: number
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+                    unique: true
+              - column:
+                  name: owner_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: currency
+                  type: varchar(3)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: balance
+                  type: decimal(18,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(7)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+
+      rollback:
+        - dropTable:
+            tableName: accounts

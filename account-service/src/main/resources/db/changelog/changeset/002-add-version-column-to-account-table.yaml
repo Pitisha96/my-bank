@@ -1,0 +1,26 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-add-version-column-to-account-table
+      author: pitosha96
+
+      preConditions:
+        - dbms:
+            type: postgresql
+        - tableExists:
+            tableName: accounts
+
+      changes:
+        - addColumn:
+            tableName: accounts
+            columns:
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: "0"
+                  constraints:
+                    nullable: false
+
+      rollback:
+        - dropColumn:
+            tableName: accounts
+            columnName: version
