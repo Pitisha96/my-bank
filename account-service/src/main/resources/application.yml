@@ -14,12 +14,11 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: false
-    show-sql: true
     properties:
       hibernate:
         default_schema: my_bank
         type:
-          json_format_mapper: com.pitisha.project.accountservice.domain.entity.mapper.CustomJsonFormatMapper
+          json_format_mapper: com.pitisha.project.mybank.accountservice.domain.entity.mapper.CustomJsonFormatMapper
 
   liquibase:
     enabled: true

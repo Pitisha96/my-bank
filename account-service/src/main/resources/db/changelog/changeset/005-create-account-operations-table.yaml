@@ -1,0 +1,74 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-create-account-operations-table
+      author: pitosha96
+      context: dev
+
+      preConditions:
+        - dbms:
+            type: postgresql
+        - not:
+            tableExists:
+              tableName: account_operations
+
+      changes:
+        - createTable:
+            tableName: account_operations
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+                    unique: true
+                  autoIncrement: true
+              - column:
+                  name: transaction_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: type
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: account_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount
+                  type: decimal(18,2)
+                  constraints:
+                    nullable: false
+                    checkConstraint: amount > 0
+              - column:
+                  name: created_at
+                  type: timestamp
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+
+        - addUniqueConstraint:
+            constraintName: uk_account_operations_transaction_id_type
+            tableName: account_operations
+            columnNames: transaction_id, type
+
+        - sql:
+            sql:
+              CREATE UNIQUE INDEX ux_account_operations_transaction_id
+              ON account_operations(transaction_id)
+              WHERE type IN ('WITHDRAW', 'CANCEL');
+            stripComments: true
+
+      rollback:
+        - sql:
+            sql: DROP INDEX ux_account_operations_transaction_id
+            stripComments: true
+        - dropUniqueConstraint:
+            tableName: account_operations
+            constraintName: uk_account_operations_transaction_id_type
+        - dropTable:
+            tableName: account_operations
