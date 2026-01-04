@@ -1,0 +1,31 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-add-reserved-column-to-accounts-table
+      author: pitosha96
+      context: dev
+
+      preConditions:
+        - dbms:
+            type: postgresql
+        - tableExists:
+            tableName: accounts
+        - not:
+            columnExists:
+              tableName: accounts
+              columnName: reserved
+
+      changes:
+        - addColumn:
+            tableName: accounts
+            columns:
+              - column:
+                  name: reserved
+                  type: decimal(18,2)
+                  defaultValueNumeric: "0"
+                  constraints:
+                    nullable: false
+
+      rollback:
+        - dropColumn:
+            tableName: accounts
+            columnName: reserved
