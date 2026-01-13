@@ -26,7 +26,7 @@ public class InternalController {
     public ResponseEntity<Void> reserve(@PathVariable final UUID number,
                                         @PathVariable final UUID transactionId,
                                         @Validated @RequestBody final AmountRequest request) {
-        accountOperationService.reserve(transactionId, number, request.amount());
+        accountOperationService.reserve(transactionId, number, request.amount(), request.currency());
         return accepted().build();
     }
 
@@ -46,7 +46,7 @@ public class InternalController {
     public ResponseEntity<Void> credit(@PathVariable final UUID number,
                                        @PathVariable final UUID transactionId,
                                        @Validated @RequestBody final AmountRequest request) {
-        accountOperationService.credit(transactionId, number, request.amount());
+        accountOperationService.credit(transactionId, number, request.amount(), request.currency());
         return accepted().build();
     }
 }

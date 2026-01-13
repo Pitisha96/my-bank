@@ -1,0 +1,29 @@
+databaseChangeLog:
+  - changeSet:
+      id: 008-add-currency-column-to-account-operations-table
+      author: pitosha96
+
+      preConditions:
+        - dbms:
+            type: postgresql
+        - tableExists:
+            tableName: account_operations
+        - not:
+            columnExists:
+              tableName: account_operations
+              columnName: currency
+
+      changes:
+        - addColumn:
+            tableName: account_operations
+            columns:
+              - column:
+                  name: currency
+                  type: varchar(3)
+                  constraints:
+                    nullable: false
+
+      rollback:
+        - dropColumn:
+            tableName: account_operations
+            columnName: currency

@@ -1,0 +1,36 @@
+databaseChangeLog:
+  - changeSet:
+      id: 006-change-data-type-for-balance-and-reserved-accounts-table
+      author: pitosha96
+
+      preConditions:
+        - dbms:
+            type: postgresql
+        - tableExists:
+            tableName: accounts
+        - columnExists:
+            tableName: accounts
+            columnName: balance
+        - columnExists:
+            tableName: accounts
+            columnName: reserved
+
+      changes:
+        - modifyDataType:
+            tableName: accounts
+            columnName: balance
+            newDataType: numeric(24,6)
+        - modifyDataType:
+            tableName: accounts
+            columnName: reserved
+            newDataType: numeric(24,6)
+
+      rollback:
+        - modifyDataType:
+            tableName: accounts
+            columnName: reserved
+            newDataType: numeric(18,2)
+        - modifyDataType:
+            tableName: accounts
+            columnName: balance
+            newDataType: numeric(18,2)

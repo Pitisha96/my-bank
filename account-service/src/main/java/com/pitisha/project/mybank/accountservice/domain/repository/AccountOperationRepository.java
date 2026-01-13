@@ -26,12 +26,13 @@ public interface AccountOperationRepository extends JpaRepository<AccountOperati
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = """
-        INSERT INTO account_operations(transaction_id, type, account_id, amount)
-        VALUES (:transactionId, :type, :accountId, :amount)
+        INSERT INTO account_operations(transaction_id, type, account_id, amount, currency)
+        VALUES (:transactionId, :type, :accountId, :amount, :currency)
         ON CONFLICT DO NOTHING;
         """, nativeQuery = true)
     int insertIfNotExists(@Param("transactionId") UUID txId,
                           @Param("type") String type,
                           @Param("accountId") UUID accountId,
-                          @Param("amount") BigDecimal amount);
+                          @Param("amount") BigDecimal amount,
+                          @Param("currency") String currency);
 }

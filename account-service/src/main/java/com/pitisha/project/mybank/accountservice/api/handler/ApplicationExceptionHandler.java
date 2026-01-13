@@ -1,8 +1,6 @@
 package com.pitisha.project.mybank.accountservice.api.handler;
 
 import static com.pitisha.project.mybank.accountservice.api.dto.response.ErrorCode.VALIDATION_ERROR;
-import static java.time.LocalDateTime.now;
-import static java.util.Collections.singletonList;
 import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
@@ -13,8 +11,6 @@ import static org.springframework.http.ResponseEntity.status;
 
 import com.pitisha.project.mybank.accountservice.api.dto.response.ErrorCode;
 import com.pitisha.project.mybank.accountservice.api.dto.response.ErrorResponse;
-import com.pitisha.project.mybank.accountservice.api.dto.response.ValidationErrorResponse;
-import com.pitisha.project.mybank.accountservice.domain.exception.AccountFilterValidationException;
 import com.pitisha.project.mybank.accountservice.domain.exception.ApplicationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -51,18 +47,6 @@ public class ApplicationExceptionHandler {
                         VALIDATION_ERROR_MESSAGE,
                         getValidationDetailedMessages(e)
                 ));
-    }
-
-    @ExceptionHandler(AccountFilterValidationException.class)
-    public ResponseEntity<ValidationErrorResponse> handleAccountFilterValidationException(final AccountFilterValidationException e) {
-        return status(BAD_REQUEST).body(
-                new ValidationErrorResponse(
-                        now(),
-                        BAD_REQUEST.value(),
-                        BAD_REQUEST.getReasonPhrase(),
-                        singletonList(e.getMessage())
-                )
-        );
     }
 
     private Map<String, Object> getValidationDetailedMessages(final MethodArgumentNotValidException e) {
