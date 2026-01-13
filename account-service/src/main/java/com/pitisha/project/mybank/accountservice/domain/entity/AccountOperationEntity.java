@@ -4,6 +4,7 @@ import static jakarta.persistence.EnumType.STRING;
 import static jakarta.persistence.GenerationType.IDENTITY;
 import static java.time.LocalDateTime.now;
 
+import com.pitisha.project.mybank.domain.entity.AccountCurrency;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Enumerated;
@@ -58,6 +59,10 @@ public class AccountOperationEntity {
     @Positive
     @Column(nullable = false)
     private BigDecimal amount;
+
+    @Column(nullable = false, length = 3)
+    @Enumerated(STRING)
+    private AccountCurrency currency;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;

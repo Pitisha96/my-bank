@@ -1,0 +1,25 @@
+databaseChangeLog:
+  - changeSet:
+      id: 007-change-data-type-for-amount-account-operations-table
+      author: pitosha96
+
+      preConditions:
+        - dbms:
+            type: postgresql
+        - tableExists:
+            tableName: account_operations
+        - columnExists:
+            tableName: account_operations
+            columnName: amount
+
+      changes:
+        - modifyDataType:
+            tableName: account_operations
+            columnName: amount
+            newDataType: numeric(24,6)
+
+      rollback:
+        - modifyDataType:
+            tableName: account_operations
+            columnName: amount
+            newDataType: numeric(18,2)

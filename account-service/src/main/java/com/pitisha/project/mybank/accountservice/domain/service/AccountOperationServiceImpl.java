@@ -17,6 +17,7 @@ import com.pitisha.project.mybank.accountservice.domain.exception.IllegalBalance
 import com.pitisha.project.mybank.accountservice.domain.exception.IllegalOperationOrderException;
 import com.pitisha.project.mybank.accountservice.domain.exception.IllegalStatusStateException;
 import com.pitisha.project.mybank.accountservice.domain.exception.ResourceNotFoundException;
+import com.pitisha.project.mybank.domain.entity.AccountCurrency;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,10 +33,12 @@ public class AccountOperationServiceImpl implements AccountOperationService {
 
     private final AccountOperationRepository accountOperationRepository;
     private final AccountRepository accountRepository;
+    private final ExchangeService exchangeService;
 
     private static final String ACCOUNT_ID_MUST_NOT_BE_NULL = "Account id must not be null";
     private static final String TRANSACTION_ID_MUST_NOT_BE_NULL = "Transaction id must not be null";
     private static final String AMOUNT_MUST_NOT_BE_NULL = "Amount must not be null";
+    private static final String CURRENCY_MUST_NOT_BE_NULL = "Currency must not be null";
     private static final String AMOUNT_MUST_BE_POSITIVE = "Amount must be positive";
     private static final String ACCOUNT_IS_NOT_DEFINED = "Account is not defined!";
     private static final String ACCOUNT_NOT_AVAILABLE = "Account is %s!";
@@ -50,9 +53,9 @@ public class AccountOperationServiceImpl implements AccountOperationService {
 
     @Transactional
     @Override
-    public void reserve(final UUID txId, final UUID accountId, final BigDecimal amount) {
-        validateParams(txId, accountId, amount);
-        if (accountOperationRepository.insertIfNotExists(txId, RESERVE.name(), accountId, amount) == 0) {
+    public void reserve(final UUID txId, final UUID accountId, final BigDecimal amount, final AccountCurrency currency) {
+        validateParams(txId, accountId, amount, currency);
+        if (accountOperationRepository.insertIfNotExists(txId, RESERVE.name(), accountId, amount, currency.name()) == 0) {
             log.info(ALREADY_PROCESSED, RESERVE.name(), txId, accountId);
             return;
         }
@@ -60,10 +63,11 @@ public class AccountOperationServiceImpl implements AccountOperationService {
         if (!account.canReserve()) {
             logAndThrowIllegalStatusState(RESERVE, txId, accountId, account.getStatus());
         }
-        if (!account.canReserve(amount)) {
+        final BigDecimal exchanged = exchangeService.exchange(amount, currency, account.getCurrency());
+        if (!account.canReserve(exchanged)) {
             logAndThrowIllegalBalanceState(RESERVE, txId, accountId, INSUFFICIENT_FUNDS);
         }
-        account.setReserved(account.getReserved().add(amount));
+        account.setReserved(account.getReserved().add(exchanged));
         accountRepository.save(account);
         logCompletion(RESERVE, txId, accountId);
     }
@@ -72,19 +76,20 @@ public class AccountOperationServiceImpl implements AccountOperationService {
     @Override
     public void withdraw(final UUID txId) {
         final var op = lockOperationForUpdate(txId);
-        if (accountOperationRepository.insertIfNotExists(txId, WITHDRAW.name(), op.getAccountId(), op.getAmount()) == 0) {
+        if (accountOperationRepository.insertIfNotExists(txId, WITHDRAW.name(), op.getAccountId(), op.getAmount(), op.getCurrency().name()) == 0) {
             log.info(ALREADY_TERMINATED, WITHDRAW.name(), txId);
             return;
         }
         final var account = lockAccountForUpdate(op.getAccountId());
+        final BigDecimal exchanged = exchangeService.exchange(op.getAmount(), op.getCurrency(), account.getCurrency());
         if (!account.canWithdraw()) {
             logAndThrowIllegalStatusState(WITHDRAW, txId, op.getAccountId(), account.getStatus());
         }
-        if (account.getReserved().compareTo(op.getAmount()) < 0) {
+        if (account.getReserved().compareTo(exchanged) < 0) {
             logAndThrowIllegalBalanceState(WITHDRAW, txId, op.getAccountId(), RESERVED_BALANCE_CORRUPTED);
         }
-        account.setReserved(account.getReserved().subtract(op.getAmount()));
-        account.setBalance(account.getBalance().subtract(op.getAmount()));
+        account.setReserved(account.getReserved().subtract(exchanged));
+        account.setBalance(account.getBalance().subtract(exchanged));
         accountRepository.save(account);
         logCompletion(WITHDRAW, txId, op.getAccountId());
     }
@@ -93,27 +98,28 @@ public class AccountOperationServiceImpl implements AccountOperationService {
     @Override
     public void cancel(final UUID txId) {
         final var op = lockOperationForUpdate(txId);
-        if (accountOperationRepository.insertIfNotExists(txId, CANCEL.name(), op.getAccountId(), op.getAmount()) == 0) {
+        if (accountOperationRepository.insertIfNotExists(txId, CANCEL.name(), op.getAccountId(), op.getAmount(), op.getCurrency().name()) == 0) {
             log.info(ALREADY_TERMINATED, CANCEL.name(), txId);
             return;
         }
         final var account = lockAccountForUpdate(op.getAccountId());
-        if (account.getReserved().compareTo(op.getAmount()) < 0) {
+        final BigDecimal exchanged = exchangeService.exchange(op.getAmount(), op.getCurrency(), account.getCurrency());
+        if (account.getReserved().compareTo(exchanged) < 0) {
             logAndThrowIllegalBalanceState(CANCEL, txId, op.getAccountId(), RESERVED_BALANCE_CORRUPTED);
         }
         if (!account.canCancel()) {
             logAndThrowIllegalStatusState(CANCEL, txId, op.getAccountId(), account.getStatus());
         }
-        account.setReserved(account.getReserved().subtract(op.getAmount()));
+        account.setReserved(account.getReserved().subtract(exchanged));
         accountRepository.save(account);
         logCompletion(CANCEL, txId, op.getAccountId());
     }
 
     @Transactional
     @Override
-    public void credit(final UUID txId, final UUID accountId, final BigDecimal amount) {
-        validateParams(txId, accountId, amount);
-        if (accountOperationRepository.insertIfNotExists(txId, CREDIT.name(), accountId, amount) == 0) {
+    public void credit(final UUID txId, final UUID accountId, final BigDecimal amount, final AccountCurrency currency) {
+        validateParams(txId, accountId, amount, currency);
+        if (accountOperationRepository.insertIfNotExists(txId, CREDIT.name(), accountId, amount, currency.name()) == 0) {
             log.info(ALREADY_PROCESSED, CREDIT.name(), txId, accountId);
             return;
         }
@@ -121,14 +127,19 @@ public class AccountOperationServiceImpl implements AccountOperationService {
         if (!account.canCredit()) {
             logAndThrowIllegalStatusState(CREDIT, txId, accountId, account.getStatus());
         }
-        account.setBalance(account.getBalance().add(amount));
+        final BigDecimal exchanged = exchangeService.exchange(amount, currency, account.getCurrency());
+        account.setBalance(account.getBalance().add(exchanged));
         accountRepository.save(account);
     }
 
-    private void validateParams(final UUID transactionId, final UUID number, final BigDecimal amount) {
+    private void validateParams(final UUID transactionId,
+                                final UUID number,
+                                final BigDecimal amount,
+                                final AccountCurrency currency) {
         requireNonNullOrElseThrow(transactionId, TRANSACTION_ID_MUST_NOT_BE_NULL);
         requireNonNullOrElseThrow(number, ACCOUNT_ID_MUST_NOT_BE_NULL);
         requireNonNullOrElseThrow(amount, AMOUNT_MUST_NOT_BE_NULL);
+        requireNonNullOrElseThrow(currency, CURRENCY_MUST_NOT_BE_NULL);
         requirePositiveAmount(amount, AMOUNT_MUST_BE_POSITIVE);
     }
 

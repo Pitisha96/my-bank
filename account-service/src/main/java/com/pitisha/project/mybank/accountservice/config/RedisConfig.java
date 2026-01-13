@@ -1,6 +1,6 @@
 package com.pitisha.project.mybank.accountservice.config;
 
-import static java.time.Duration.ofMinutes;
+import static java.time.Duration.ofSeconds;
 import static org.springframework.data.redis.cache.RedisCacheConfiguration.defaultCacheConfig;
 import static org.springframework.data.redis.cache.RedisCacheManager.builder;
 import static org.springframework.data.redis.serializer.RedisSerializationContext.SerializationPair.fromSerializer;
@@ -32,7 +32,7 @@ public class RedisConfig {
     @Bean
     public CacheManager cacheManager(final RedisConnectionFactory connectionFactory, final JsonMapper jm) {
             final RedisCacheConfiguration defaultConfig = defaultCacheConfig()
-                    .entryTtl(ofMinutes(5L))
+                    .entryTtl(ofSeconds(30))
                     .serializeKeysWith(fromSerializer(new StringRedisSerializer()));
 
             return builder(connectionFactory)
