@@ -1,0 +1,74 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-transactions-table
+      author: pitosha96
+      context: dev
+
+      preConditions:
+        - dbms:
+            type: postgresql
+        - not:
+            tableExists:
+              tableName: transactions
+
+      changes:
+        - createTable:
+            tableName: transactions
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+                    unique: true
+              - column:
+                  name: initiator
+                  type: uuid
+              - column:
+                  name: type
+                  type: varchar(15)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(15)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: from_account_id
+                  type: uuid
+              - column:
+                  name: to_account_id
+                  type: uuid
+              - column:
+                  name: amount
+                  type: numeric(18,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: currency
+                  type: varchar(3)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: "0"
+                  constraints:
+                    nullable: false
+
+      rollback:
+        - dropTable:
+            tableName: transactions

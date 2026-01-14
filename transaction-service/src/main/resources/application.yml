@@ -1,0 +1,51 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: transaction-service
+
+  datasource:
+    url: ${POSTGRES_URL}
+    username: ${POSTGRES_USERNAME}
+    password: ${POSTGRES_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        default_schema: tx_service
+
+  liquibase:
+    enabled: true
+    contexts: dev
+    default-schema: tx_service
+    liquibase-schema: tx_service
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI}
+      client:
+        provider:
+          keycloak:
+            token-uri: ${KEYCLOAK_TOKEN_URI}
+        registration:
+          keycloak:
+            provider: keycloak
+            client-id: ${KEYCLOAK_CLIENT_ID}
+            client-secret: ${KEYCLOAK_CLIENT_SECRET}
+            authorization-grant-type: client_credentials
+            scope: accounts
+
+resilience4j:
+  retry:
+    instances:
+      accountClient:
+        max-attempts: 3
+        wait-duration: 300ms
+        retry-exceptions:
+          - com.pitisha.project.mybank.transactionservice.infrastructure.client.exception.AccountServiceTechnicalException
