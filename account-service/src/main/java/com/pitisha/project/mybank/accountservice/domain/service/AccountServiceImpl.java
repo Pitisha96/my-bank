@@ -106,17 +106,15 @@ public class AccountServiceImpl implements AccountService {
         entity.setStatus(ACTIVE);
         accountRepository.save(entity);
 
-        //outbox process
         final var outbox = new AccountOutboxEntity();
         outbox.setTopic(ACCOUNT_CREATED_TOPIC.getTopicName());
         outbox.setPayload(jsonMapper.writeValueAsString(
                 new AccountCreatedEvent(
                         entity.getNumber(),
                         entity.getOwnerId(),
-                        entity.getCurrency().toString()
+                        entity.getCurrency()
                 )
         ));
-        outbox.setProcessed(false);
         outboxRepository.save(outbox);
 
         return accountMapper.entityToDto(entity);
