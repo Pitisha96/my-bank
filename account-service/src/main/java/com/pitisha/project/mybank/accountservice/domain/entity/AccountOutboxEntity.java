@@ -38,9 +38,6 @@ public class AccountOutboxEntity {
     private String payload;
 
     @Column(nullable = false)
-    private Boolean processed;
-
-    @Column(nullable = false)
     private LocalDateTime createdAt;
 
     @PrePersist

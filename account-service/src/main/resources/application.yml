@@ -36,3 +36,9 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: ${KEYCLOAK_ISSUER_URI}
+
+outbox:
+  topics:
+    account-created-topic: com.pitisha.project.mybank.kafka.event.AccountCreatedEvent
+    account-withdrawn-topic: com.pitisha.project.mybank.kafka.event.AccountWithdrawnEvent
+    account-credited-topic: com.pitisha.project.mybank.kafka.event.AccountCreditedEvent

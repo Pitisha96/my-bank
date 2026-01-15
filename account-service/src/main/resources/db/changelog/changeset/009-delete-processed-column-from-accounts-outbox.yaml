@@ -1,0 +1,30 @@
+databaseChangeLog:
+  - changeSet:
+      id: 009-delete-processed-column-from-accounts-outbox
+      author: pitosha96
+      context: dev
+
+      preConditions:
+        - dbms:
+            type: postgresql
+        - tableExists:
+            tableName: accounts_outbox
+        - columnExists:
+            tableName: accounts_outbox
+            columnName: processed
+
+      changes:
+        - dropColumn:
+            tableName: accounts_outbox
+            columnName: processed
+
+      rollback:
+        - addColumn:
+            tableName: accounts_outbox
+            columns:
+              - column:
+                  name: processed
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false

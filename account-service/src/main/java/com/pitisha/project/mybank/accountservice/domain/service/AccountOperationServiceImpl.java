@@ -6,11 +6,14 @@ import static com.pitisha.project.mybank.accountservice.domain.entity.AccountOpe
 import static com.pitisha.project.mybank.accountservice.domain.entity.AccountOperationType.WITHDRAW;
 import static com.pitisha.project.mybank.accountservice.domain.util.ArgumentValidationUtils.requireNonNullOrElseThrow;
 import static com.pitisha.project.mybank.accountservice.domain.util.ArgumentValidationUtils.requirePositiveAmount;
+import static com.pitisha.project.mybank.kafka.topic.TopicName.ACCOUNT_CREDITED_TOPIC;
+import static com.pitisha.project.mybank.kafka.topic.TopicName.ACCOUNT_WITHDRAWN_TOPIC;
 import static java.util.Objects.isNull;
 
 import com.pitisha.project.mybank.accountservice.domain.entity.AccountEntity;
 import com.pitisha.project.mybank.accountservice.domain.entity.AccountOperationEntity;
 import com.pitisha.project.mybank.accountservice.domain.entity.AccountOperationType;
+import com.pitisha.project.mybank.accountservice.domain.entity.AccountOutboxEntity;
 import com.pitisha.project.mybank.accountservice.domain.entity.AccountStatus;
 import com.pitisha.project.mybank.accountservice.domain.repository.AccountOperationRepository;
 import com.pitisha.project.mybank.accountservice.domain.repository.AccountRepository;
@@ -18,12 +21,16 @@ import com.pitisha.project.mybank.accountservice.domain.exception.IllegalBalance
 import com.pitisha.project.mybank.accountservice.domain.exception.IllegalOperationOrderException;
 import com.pitisha.project.mybank.accountservice.domain.exception.IllegalStatusStateException;
 import com.pitisha.project.mybank.accountservice.domain.exception.ResourceNotFoundException;
+import com.pitisha.project.mybank.accountservice.domain.repository.AccountsOutboxRepository;
 import com.pitisha.project.mybank.domain.entity.AccountCurrency;
+import com.pitisha.project.mybank.kafka.event.AccountCreditedEvent;
+import com.pitisha.project.mybank.kafka.event.AccountWithdrawnEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -35,7 +42,9 @@ public class AccountOperationServiceImpl implements AccountOperationService {
 
     private final AccountOperationRepository accountOperationRepository;
     private final AccountRepository accountRepository;
+    private final AccountsOutboxRepository accountsOutboxRepository;
     private final ExchangeService exchangeService;
+    private final JsonMapper jsonMapper = new JsonMapper();
 
     private static final String ACCOUNT_ID_MUST_NOT_BE_NULL = "Account id must not be null";
     private static final String TRANSACTION_ID_MUST_NOT_BE_NULL = "Transaction id must not be null";
@@ -96,7 +105,13 @@ public class AccountOperationServiceImpl implements AccountOperationService {
         }
         account.setReserved(account.getReserved().subtract(exchanged));
         account.setBalance(account.getBalance().subtract(exchanged));
+        final var outbox = new AccountOutboxEntity();
+        outbox.setTopic(ACCOUNT_WITHDRAWN_TOPIC.getTopicName());
+        outbox.setPayload(jsonMapper.writeValueAsString(
+                new AccountWithdrawnEvent(op.getAccountId(), account.getOwnerId(), op.getCurrency(), op.getAmount())
+        ));
         accountRepository.save(account);
+        accountsOutboxRepository.save(outbox);
         logCompletion(WITHDRAW, txId, op.getAccountId());
     }
 
@@ -138,7 +153,13 @@ public class AccountOperationServiceImpl implements AccountOperationService {
         }
         final BigDecimal exchanged = exchangeService.exchange(amount, currency, account.getCurrency());
         account.setBalance(account.getBalance().add(exchanged));
+        final var outbox = new AccountOutboxEntity();
+        outbox.setTopic(ACCOUNT_CREDITED_TOPIC.getTopicName());
+        outbox.setPayload(jsonMapper.writeValueAsString(
+                new AccountCreditedEvent(accountId, account.getOwnerId(), currency, amount)
+        ));
         accountRepository.save(account);
+        accountsOutboxRepository.save(outbox);
     }
 
     private void validateParams(final UUID transactionId,
