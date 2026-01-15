@@ -1,5 +1,8 @@
 package com.pitisha.project.mybank.accountservice.api.controller;
 
+import static com.pitisha.project.mybank.domain.entity.AccountCurrency.valueOf;
+import static java.util.UUID.fromString;
+import static org.apache.logging.log4j.util.Strings.isBlank;
 import static org.springframework.http.ResponseEntity.accepted;
 
 import com.pitisha.project.mybank.accountservice.api.dto.request.AmountRequest;
@@ -10,6 +13,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -23,10 +27,11 @@ public class InternalController {
     private final AccountOperationService accountOperationService;
 
     @PostMapping("/accounts/{number}/operations/{transactionId}/reserve")
-    public ResponseEntity<Void> reserve(@PathVariable final UUID number,
+    public ResponseEntity<Void> reserve(@RequestHeader(value = "X-User-Id", required = false) String xUserId,
+                                        @PathVariable final UUID number,
                                         @PathVariable final UUID transactionId,
                                         @Validated @RequestBody final AmountRequest request) {
-        accountOperationService.reserve(transactionId, number, request.amount(), request.currency());
+        accountOperationService.reserve(parseUUID(xUserId), transactionId, number, request.amount(), valueOf(request.currency()));
         return accepted().build();
     }
 
@@ -43,10 +48,22 @@ public class InternalController {
     }
 
     @PostMapping("/accounts/{number}/operations/{transactionId}/credit")
-    public ResponseEntity<Void> credit(@PathVariable final UUID number,
+    public ResponseEntity<Void> credit(@RequestHeader(value = "X-User-Id", required = false) String xUserId,
+                                       @PathVariable final UUID number,
                                        @PathVariable final UUID transactionId,
                                        @Validated @RequestBody final AmountRequest request) {
-        accountOperationService.credit(transactionId, number, request.amount(), request.currency());
+        accountOperationService.credit(parseUUID(xUserId), transactionId, number, request.amount(), valueOf(request.currency()));
         return accepted().build();
+    }
+
+    private UUID parseUUID(final String uuid) {
+        if (isBlank(uuid)) {
+            return null;
+        }
+        try {
+            return fromString(uuid);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 }

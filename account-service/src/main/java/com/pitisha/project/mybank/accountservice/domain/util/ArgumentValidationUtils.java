@@ -2,7 +2,7 @@ package com.pitisha.project.mybank.accountservice.domain.util;
 
 import static java.util.Objects.isNull;
 
-import com.pitisha.project.mybank.accountservice.domain.exception.InvalidRequestException;
+import com.pitisha.project.mybank.accountservice.domain.exception.ValidationException;
 
 import java.math.BigDecimal;
 
@@ -10,7 +10,7 @@ public class ArgumentValidationUtils {
 
     public static void requireNonNullOrElseThrow(final Object object, final String message) {
         if (isNull(object)) {
-            throw new InvalidRequestException(message);
+            throw new ValidationException(message);
         }
     }
 
@@ -18,6 +18,6 @@ public class ArgumentValidationUtils {
         if (amount.signum() > 0) {
             return;
         }
-        throw new InvalidRequestException(message);
+        throw new ValidationException(message);
     }
 }

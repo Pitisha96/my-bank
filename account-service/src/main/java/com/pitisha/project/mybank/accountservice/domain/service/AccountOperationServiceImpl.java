@@ -6,6 +6,7 @@ import static com.pitisha.project.mybank.accountservice.domain.entity.AccountOpe
 import static com.pitisha.project.mybank.accountservice.domain.entity.AccountOperationType.WITHDRAW;
 import static com.pitisha.project.mybank.accountservice.domain.util.ArgumentValidationUtils.requireNonNullOrElseThrow;
 import static com.pitisha.project.mybank.accountservice.domain.util.ArgumentValidationUtils.requirePositiveAmount;
+import static java.util.Objects.isNull;
 
 import com.pitisha.project.mybank.accountservice.domain.entity.AccountEntity;
 import com.pitisha.project.mybank.accountservice.domain.entity.AccountOperationEntity;
@@ -20,6 +21,7 @@ import com.pitisha.project.mybank.accountservice.domain.exception.ResourceNotFou
 import com.pitisha.project.mybank.domain.entity.AccountCurrency;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,16 +52,20 @@ public class AccountOperationServiceImpl implements AccountOperationService {
     private static final String FAILED_STATUS_REASON = "{} operation for tx={}, account={} is failed. Status: {}";
     private static final String FAILED_BALANCE_REASON = "{} operation for tx={}, account={} is failed. Reason: {}";
     private static final String COMPLETED = "{} operation for tx={}, account={} is completed";
+    private static final String ILLEGAL_ACCESS = "Illegal access";
 
     @Transactional
     @Override
-    public void reserve(final UUID txId, final UUID accountId, final BigDecimal amount, final AccountCurrency currency) {
+    public void reserve(final UUID initiator, final UUID txId, final UUID accountId, final BigDecimal amount, final AccountCurrency currency) {
         validateParams(txId, accountId, amount, currency);
         if (accountOperationRepository.insertIfNotExists(txId, RESERVE.name(), accountId, amount, currency.name()) == 0) {
             log.info(ALREADY_PROCESSED, RESERVE.name(), txId, accountId);
             return;
         }
         final var account = lockAccountForUpdate(accountId);
+        if (isNull(initiator) || !account.getOwnerId().equals(initiator)) {
+            throw new AccessDeniedException(ILLEGAL_ACCESS);
+        }
         if (!account.canReserve()) {
             logAndThrowIllegalStatusState(RESERVE, txId, accountId, account.getStatus());
         }
@@ -117,13 +123,16 @@ public class AccountOperationServiceImpl implements AccountOperationService {
 
     @Transactional
     @Override
-    public void credit(final UUID txId, final UUID accountId, final BigDecimal amount, final AccountCurrency currency) {
+    public void credit(final UUID initiator, final UUID txId, final UUID accountId, final BigDecimal amount, final AccountCurrency currency) {
         validateParams(txId, accountId, amount, currency);
         if (accountOperationRepository.insertIfNotExists(txId, CREDIT.name(), accountId, amount, currency.name()) == 0) {
             log.info(ALREADY_PROCESSED, CREDIT.name(), txId, accountId);
             return;
         }
         final var account = lockAccountForUpdate(accountId);
+        if (isNull(initiator) || !account.getOwnerId().equals(initiator)) {
+            throw new AccessDeniedException(ILLEGAL_ACCESS);
+        }
         if (!account.canCredit()) {
             logAndThrowIllegalStatusState(CREDIT, txId, accountId, account.getStatus());
         }

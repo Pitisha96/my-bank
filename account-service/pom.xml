@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.pitisha.project.mybank</groupId>
     <artifactId>account-service</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.2.0</version>
     <name>account-service</name>
     <description>account-service</description>
     <url/>
