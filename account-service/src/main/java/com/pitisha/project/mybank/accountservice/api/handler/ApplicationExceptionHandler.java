@@ -1,12 +1,12 @@
 package com.pitisha.project.mybank.accountservice.api.handler;
 
 import static com.pitisha.project.mybank.accountservice.api.dto.response.ErrorCode.VALIDATION_ERROR;
+import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
-import static org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY;
 import static org.springframework.http.ResponseEntity.status;
 
 import com.pitisha.project.mybank.accountservice.api.dto.response.ErrorCode;
@@ -57,19 +57,17 @@ public class ApplicationExceptionHandler {
     }
 
     private HttpStatus mapHttpStatus(final ErrorCode errorCode) {
+        if (isNull(errorCode)) {
+            return INTERNAL_SERVER_ERROR;
+        }
         return switch (errorCode) {
-            case VALIDATION_ERROR,
-                 INVALID_REQUEST -> BAD_REQUEST;
+            case VALIDATION_ERROR -> BAD_REQUEST;
 
             case RESOURCE_NOT_FOUND -> NOT_FOUND;
 
             case ILLEGAL_STATUS_STATE,
                  ILLEGAL_BALANCE_STATE,
-                 ILLEGAL_OPERATION_ORDER -> UNPROCESSABLE_ENTITY;
-
-            case CONCURRENT_MODIFICATION -> CONFLICT;
-
-            default -> INTERNAL_SERVER_ERROR;
+                 ILLEGAL_OPERATION_ORDER -> CONFLICT;
         };
     }
 }
