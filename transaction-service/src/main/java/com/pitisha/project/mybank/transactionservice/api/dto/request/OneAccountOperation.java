@@ -20,6 +20,5 @@ public record OneAccountOperation(
         BigDecimal amount,
 
         @NotNull
-        @ValidEnum(enumClass = AccountCurrency.class)
-        String currency
+        AccountCurrency currency
 ) { }

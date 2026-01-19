@@ -22,8 +22,8 @@ public class FeignClientConfig {
     private static final String BEARER_PREFIX = "Bearer %s";
     private static final String KEYCLOAK_REGISTRATION_ID = "keycloak";
 
-    @Value("${KEYCLOAK_CLIENT_ID}")
-    private String keycloakClientId;
+    @Value("${TX_SERVICE_CLIENT_ID}")
+    private String serviceClientId;
 
     @Bean
     public Logger.Level feignLoggerLevel() {
@@ -40,7 +40,7 @@ public class FeignClientConfig {
         return requestTemplate -> {
             final OAuth2AuthorizeRequest request = OAuth2AuthorizeRequest
                     .withClientRegistrationId(KEYCLOAK_REGISTRATION_ID)
-                    .principal(keycloakClientId)
+                    .principal(serviceClientId)
                     .build();
 
             final OAuth2AuthorizedClient authorizedClient = authorizedClientManager.authorize(request);

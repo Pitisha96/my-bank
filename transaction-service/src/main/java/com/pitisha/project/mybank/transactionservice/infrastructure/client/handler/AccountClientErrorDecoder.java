@@ -12,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.util.Objects;
+
 @Component
 @Slf4j
 public class AccountClientErrorDecoder implements ErrorDecoder {
@@ -28,7 +30,7 @@ public class AccountClientErrorDecoder implements ErrorDecoder {
             return errorDecoder.decode(key, response);
         }
         if (status >= 500) {
-            return new AccountServiceTechnicalException();
+            return new AccountServiceTechnicalException(UNDEFINED_ERROR);
         }
         final Response.Body body = response.body();
         try (var is = nonNull(body) ? body.asInputStream() : null) {
@@ -36,10 +38,11 @@ public class AccountClientErrorDecoder implements ErrorDecoder {
                 return new AccountServiceTechnicalException(UNDEFINED_ERROR);
             }
             final var error = jsonMapper.readValue(is, ErrorResponse.class);
-            if (nonNull(error.errorCode())) {
-                return new AccountServiceBusinessException(error.message());
+            final String message = Objects.toString(error.message(), UNDEFINED_ERROR);
+            if (isNull(error.errorCode())) {
+                return new AccountServiceTechnicalException(message);
             }
-            return new AccountServiceTechnicalException(error.message());
+            return new AccountServiceBusinessException(message);
         } catch (Exception e) {
             log.error(UNDEFINED_ERROR, e);
             return errorDecoder.decode(key, response);
