@@ -25,8 +25,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/transactions")
 @RequiredArgsConstructor
-public class TransactionController extends AbstractController {
+public class TransactionController {
 
+    private static final String ID_PATH_VARIABLE = "/{txId}";
+    private static final String SUB_CLAIM = "sub";
     private static final String ROOT_PATH = "/api/v1/transactions";
     private static final String TRANSACTION_IS_NOT_DEFINED = "Transaction is not defined";
 
@@ -46,16 +48,10 @@ public class TransactionController extends AbstractController {
                 getCurrentUserIdFromToken(token),
                 request.accountId(),
                 request.amount(),
-                valueOf(request.currency())
+                request.currency()
         );
-        final var location = fromCurrentRequest()
-                .replacePath(null)
-                .path(ROOT_PATH)
-                .path(ID_PATH_VARIABLE)
-                .buildAndExpand(id)
-                .toUri();
         return accepted()
-                .location(location)
+                .location(createLocation(id))
                 .build();
     }
 
@@ -66,16 +62,10 @@ public class TransactionController extends AbstractController {
                 getCurrentUserIdFromToken(token),
                 request.accountId(),
                 request.amount(),
-                valueOf(request.currency())
+                request.currency()
         );
-        final var location = fromCurrentRequest()
-                .replacePath(null)
-                .path(ROOT_PATH)
-                .path(ID_PATH_VARIABLE)
-                .buildAndExpand(id)
-                .toUri();
         return accepted()
-                .location(location)
+                .location(createLocation(id))
                 .build();
     }
 
@@ -87,16 +77,23 @@ public class TransactionController extends AbstractController {
                 req.fromAccountId(),
                 req.toAccountId(),
                 req.amount(),
-                valueOf(req.currency())
+                req.currency()
         );
-        final var location = fromCurrentRequest()
+        return accepted()
+                .location(createLocation(id))
+                .build();
+    }
+
+    private URI createLocation(final UUID id) {
+        return fromCurrentRequest()
                 .replacePath(null)
                 .path(ROOT_PATH)
                 .path(ID_PATH_VARIABLE)
                 .buildAndExpand(id)
                 .toUri();
-        return accepted()
-                .location(location)
-                .build();
+    }
+
+    private UUID getCurrentUserIdFromToken(final JwtAuthenticationToken token) {
+        return fromString((String) token.getTokenAttributes().get(SUB_CLAIM));
     }
 }

@@ -6,6 +6,7 @@ import static com.pitisha.project.mybank.transactionservice.domain.entity.Transa
 import static com.pitisha.project.mybank.transactionservice.domain.entity.TransactionStatus.FAILED;
 import static com.pitisha.project.mybank.transactionservice.domain.entity.TransactionStatus.NEW;
 import static com.pitisha.project.mybank.transactionservice.domain.entity.TransactionStatus.RESERVED;
+import static java.util.Objects.nonNull;
 import static org.springframework.transaction.event.TransactionPhase.AFTER_COMMIT;
 
 import com.pitisha.project.mybank.transactionservice.domain.entity.TransactionEntity;
@@ -26,7 +27,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-import java.util.Objects;
 import java.util.UUID;
 
 @Component
@@ -51,7 +51,6 @@ public class TransactionOrchestrator {
     private static final String TRANSACTION_NOT_DEFINED = "Tx=%s is not defined";
     private static final String TRANSACTION_FAILED = "Tx={} is failed";
     private static final String SKIP_CANCEL = "Skip cancel. Tx={} is already terminated";
-    private static final String ANONYMOUS = "Anonymous";
 
     private final AccountClient accountClient;
     private final TransactionStatusService transactionStatusService;
@@ -126,7 +125,7 @@ public class TransactionOrchestrator {
         final TransactionEntity transaction = findTx(txId);
         log.info(START_RESERVATION, transaction.getId());
         accountClient.reserve(
-                Objects.toString(transaction.getInitiator().toString(), ANONYMOUS),
+                resolveInitiator(transaction.getInitiator()),
                 transaction.getFromAccountId(),
                 transaction.getId(),
                 new AmountRequest(transaction.getAmount(), transaction.getCurrency())
@@ -144,7 +143,7 @@ public class TransactionOrchestrator {
         final TransactionEntity transaction = findTx(txId);
         log.info(START_DEPOSIT, transaction.getId());
         accountClient.credit(
-                Objects.toString(transaction.getInitiator().toString(), ANONYMOUS),
+                resolveInitiator(transaction.getInitiator()),
                 transaction.getToAccountId(),
                 transaction.getId(),
                 new AmountRequest(transaction.getAmount(), transaction.getCurrency())
@@ -181,5 +180,9 @@ public class TransactionOrchestrator {
     private void logFailedAndUpdateStatus(final UUID txId, final Throwable t) {
         log.warn(TRANSACTION_FAILED, txId, t);
         transactionStatusService.updateStatus(txId, FAILED);
+    }
+
+    private String resolveInitiator(final UUID initiator) {
+        return nonNull(initiator) ? initiator.toString() : null;
     }
 }

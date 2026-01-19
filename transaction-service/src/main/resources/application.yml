@@ -36,8 +36,8 @@ spring:
         registration:
           keycloak:
             provider: keycloak
-            client-id: ${KEYCLOAK_CLIENT_ID}
-            client-secret: ${KEYCLOAK_CLIENT_SECRET}
+            client-id: ${TX_SERVICE_CLIENT_ID}
+            client-secret: ${TX_SERVICE_CLIENT_SECRET}
             authorization-grant-type: client_credentials
             scope: accounts
 
