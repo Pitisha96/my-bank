@@ -1,5 +1,8 @@
 package com.pitisha.project.mybank.transactionservice.api.dto.response;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(name = "error code", description = "Provides error code for error response")
 public enum ErrorCode {
     UNAUTHORIZED,
     FORBIDDEN,

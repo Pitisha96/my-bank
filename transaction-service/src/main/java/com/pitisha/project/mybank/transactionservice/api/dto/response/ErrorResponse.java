@@ -5,13 +5,24 @@ import static com.pitisha.project.mybank.transactionservice.api.dto.response.Err
 import static com.pitisha.project.mybank.transactionservice.api.dto.response.ErrorCode.UNAUTHORIZED;
 import static java.time.LocalDateTime.now;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.time.LocalDateTime;
 import java.util.Map;
 
+@Schema(name = "error response", description = "Provided error response")
 public record ErrorResponse(
+
+        @Schema(description = "Provided error code", example = "VALIDATION_ERROR")
         ErrorCode errorCode,
+
+        @Schema(description = "Provided error message", example = "Validation error")
         String message,
+
+        @Schema(description = "Provides detailed message")
         Map<String, Object> details,
+
+        @Schema(description = "Provides time of error")
         LocalDateTime timestamp
 ) {
 

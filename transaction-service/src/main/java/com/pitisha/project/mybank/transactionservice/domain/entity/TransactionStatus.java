@@ -1,5 +1,8 @@
 package com.pitisha.project.mybank.transactionservice.domain.entity;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(description = "transaction status")
 public enum TransactionStatus {
     NEW,
     RESERVED,

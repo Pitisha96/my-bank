@@ -41,6 +41,16 @@ spring:
             authorization-grant-type: client_credentials
             scope: accounts
 
+springdoc:
+  api-docs:
+    enabled: true
+    path: /api-spec
+  swagger-ui:
+    enabled: true
+    oauth:
+      client-id: ${TX_SERVICE_SWAGGER_CLIENT_ID}
+      use-pkce-with-authorization-code-grant: true
+
 resilience4j:
   retry:
     instances:
