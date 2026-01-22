@@ -51,6 +51,7 @@ public class TransactionOrchestrator {
     private static final String TRANSACTION_NOT_DEFINED = "Tx=%s is not defined";
     private static final String TRANSACTION_FAILED = "Tx={} is failed";
     private static final String SKIP_CANCEL = "Skip cancel. Tx={} is already terminated";
+    private static final String TRANSACTION_TYPE_IS_NOT_DEFINED = "Transaction type is not defined";
 
     private final AccountClient accountClient;
     private final TransactionStatusService transactionStatusService;
@@ -67,6 +68,7 @@ public class TransactionOrchestrator {
             case DEPOSIT -> executeDeposit(entity.getId());
             case WITHDRAW -> executeWithdraw(entity.getId());
             case TRANSFER -> executeTransfer(entity.getId());
+            default -> throw new IllegalStateException(TRANSACTION_TYPE_IS_NOT_DEFINED);
         }
     }
 
@@ -89,7 +91,7 @@ public class TransactionOrchestrator {
             reserve(txId);
             withdraw(txId, true);
             log.info(WITHDRAW_COMPLETED, txId);
-        } catch (Unauthorized | Forbidden  e ) {
+        } catch (Unauthorized | Forbidden e) {
             log.warn(WITHDRAW_FAILED_BY_TECH, txId, e);
             transactionStatusService.updateStatus(txId, FAILED);
         } catch (AccountServiceBusinessException e) {
@@ -133,10 +135,10 @@ public class TransactionOrchestrator {
         transactionStatusService.updateStatus(transaction.getId(), RESERVED);
     }
 
-    private void withdraw(final UUID txId, boolean terminated) {
+    private void withdraw(final UUID txId, final boolean terminated) {
         log.info(START_WITHDRAW, txId);
         accountClient.withdraw(txId);
-        transactionStatusService.updateStatus(txId, terminated ? COMPLETED: APPLIED);
+        transactionStatusService.updateStatus(txId, terminated ? COMPLETED : APPLIED);
     }
 
     private void credit(final UUID txId) {

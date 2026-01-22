@@ -70,7 +70,11 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Transactional
     @Override
-    public UUID startTransfer(final UUID initiator, final UUID fromAccountId, final UUID toAccountId, final BigDecimal amount, final AccountCurrency currency) {
+    public UUID startTransfer(final UUID initiator,
+                              final UUID fromAccountId,
+                              final UUID toAccountId,
+                              final BigDecimal amount,
+                              final AccountCurrency currency) {
         validate(fromAccountId, toAccountId, amount);
         final var tx = new TransactionEntity(initiator, TRANSFER, NEW,  fromAccountId, toAccountId, amount, currency);
         transactionRepository.saveAndFlush(tx);

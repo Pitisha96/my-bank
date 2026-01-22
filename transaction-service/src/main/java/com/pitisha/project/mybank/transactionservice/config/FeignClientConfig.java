@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.oauth2.client.OAuth2AuthorizeRequest;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
+
 @Configuration
 @EnableFeignClients(basePackages = "com.pitisha.project.mybank.transactionservice.infrastructure.client")
 public class FeignClientConfig {

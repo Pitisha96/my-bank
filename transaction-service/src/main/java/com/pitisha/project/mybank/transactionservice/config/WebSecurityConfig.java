@@ -61,7 +61,7 @@ public class WebSecurityConfig {
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         final var converter = new JwtAuthenticationConverter();
         converter.setPrincipalClaimName(PREFERRED_USERNAME);
-        converter.setJwtGrantedAuthoritiesConverter( jwt -> {
+        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
             final var authorities = new JwtGrantedAuthoritiesConverter().convert(jwt);
             final var roles = jwt.getClaimAsStringList(SPRING_SEC_ROLES).stream()
                     .filter(role -> role.startsWith(ROLE_PREFIX))

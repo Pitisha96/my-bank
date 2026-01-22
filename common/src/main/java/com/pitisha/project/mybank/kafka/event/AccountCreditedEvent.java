@@ -5,7 +5,7 @@ import com.pitisha.project.mybank.domain.entity.AccountCurrency;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-public record AccountCreditedEvent (
+public record AccountCreditedEvent(
     UUID accountId,
     UUID ownerId,
     AccountCurrency currency,

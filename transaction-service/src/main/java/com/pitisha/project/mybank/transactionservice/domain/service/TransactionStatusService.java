@@ -8,5 +8,6 @@ import java.util.UUID;
 public interface TransactionStatusService {
 
     Optional<TransactionStatus> findStatusByTransactionId(UUID id);
+
     void updateStatus(UUID txId, TransactionStatus status);
 }
