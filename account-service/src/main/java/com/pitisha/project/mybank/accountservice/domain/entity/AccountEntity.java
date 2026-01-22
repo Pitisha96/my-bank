@@ -42,7 +42,7 @@ public class AccountEntity {
     @Column(nullable = false)
     private UUID ownerId;
 
-    @Column(nullable = false,length = 16)
+    @Column(nullable = false, length = 16)
     @Enumerated(STRING)
     private AccountCurrency currency;
 

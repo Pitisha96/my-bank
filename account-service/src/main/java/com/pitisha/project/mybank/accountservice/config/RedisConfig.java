@@ -45,9 +45,15 @@ public class RedisConfig {
     private Map<String, RedisCacheConfiguration> redisConfigs(final RedisCacheConfiguration defaultConfig, final JsonMapper jm) {
         final var type = jm.getTypeFactory().constructCollectionType(List.class, AccountResponse.class);
         final Map<String, RedisCacheConfiguration> configs = new HashMap<>();
-        configs.put(ACCOUNT_PAGES, defaultConfig.serializeValuesWith(fromSerializer(new JacksonJsonRedisSerializer<>(jm, AccountPageResponse.class))));
-        configs.put(FIND_BY_NUMBER_ACCOUNTS, defaultConfig.serializeValuesWith(fromSerializer(new JacksonJsonRedisSerializer<>(jm, AccountResponse.class))));
-        configs.put(FIND_BY_OWNER_ID_ACCOUNTS, defaultConfig.serializeValuesWith(fromSerializer(new JacksonJsonRedisSerializer<>(jm, type))));
+        configs.put(ACCOUNT_PAGES, defaultConfig.serializeValuesWith(
+            fromSerializer(new JacksonJsonRedisSerializer<>(jm, AccountPageResponse.class))
+        ));
+        configs.put(FIND_BY_NUMBER_ACCOUNTS, defaultConfig.serializeValuesWith(
+            fromSerializer(new JacksonJsonRedisSerializer<>(jm, AccountResponse.class))
+        ));
+        configs.put(FIND_BY_OWNER_ID_ACCOUNTS, defaultConfig.serializeValuesWith(
+            fromSerializer(new JacksonJsonRedisSerializer<>(jm, type))
+        ));
         return configs;
     }
 }

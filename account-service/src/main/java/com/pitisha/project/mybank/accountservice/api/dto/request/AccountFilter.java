@@ -41,4 +41,4 @@ public record AccountFilter(
         @Positive
         @Max(50)
         Integer pageSize
-) {}
+) { }

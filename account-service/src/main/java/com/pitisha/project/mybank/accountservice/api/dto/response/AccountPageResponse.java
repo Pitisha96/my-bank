@@ -7,4 +7,4 @@ public record AccountPageResponse(
         Integer totalPages,
         Integer currentPage,
         Integer pageSize
-) {}
+) { }

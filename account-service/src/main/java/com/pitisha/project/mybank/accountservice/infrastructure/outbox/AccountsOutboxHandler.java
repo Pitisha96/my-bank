@@ -52,7 +52,7 @@ public class AccountsOutboxHandler {
                 currentThread().interrupt();
                 log.error(SCHEDULER_WAS_INTERRUPTED, e);
                 throw new RuntimeException(SCHEDULER_WAS_INTERRUPTED, e);
-            } catch(Exception e) {
+            } catch (Exception e) {
                 log.error(FAILED_TO_SEND_KAFKA_EVENT, e);
                 throw new RuntimeException(e);
             }

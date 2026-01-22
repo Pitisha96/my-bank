@@ -11,9 +11,14 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface AccountService {
+
     AccountPageResponse findAll(AccountFilter filter);
+
     Optional<AccountResponse> findByNumber(UUID number);
+
     List<AccountResponse> findByOwnerId(UUID ownerId);
+
     AccountResponse create(UUID userId, AccountCurrency currency);
+
     AccountResponse updateStatus(UUID number, AccountStatus status);
 }

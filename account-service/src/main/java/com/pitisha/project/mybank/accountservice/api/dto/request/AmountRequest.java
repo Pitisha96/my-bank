@@ -18,4 +18,4 @@ public record AmountRequest(
         @NotNull
         @ValidEnum(enumClass = AccountCurrency.class)
         String currency
-) {}
+) { }
