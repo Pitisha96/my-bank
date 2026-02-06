@@ -1,0 +1,38 @@
+server:
+  port: 8083
+
+spring:
+
+  application:
+    name: notification-service
+
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgres://localhost:5432/my_bank_db?currentSchema=notification_service}
+    username: ${POSTGRES_USERNAME:admin}
+    password: ${POSTGRES_PASSWORD:admin}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        default_schema: notification_service
+
+  liquibase:
+    enabled: true
+    contexts: dev
+    liquibase-schema: notification_service
+    default-schema: notification_service
+
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: ${KEYCLOAK_CLIENT_ID:notification-service}
+            client-secret: ${KEYCLOAK_CLIENT_SECRET}
+            scope: openid,profile,email
+        provider:
+          keycloak:
+            issuer-uri: http://localhost:8080/realms/my-bank-realm

@@ -1,0 +1,63 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-notifications-table
+      author: pitosha96
+      context: dev
+
+      preConditions:
+        - dbms:
+            type: postgresql
+        - not:
+            tableExists:
+              tableName: notifications
+
+      changes:
+        - createTable:
+            tableName: notifications
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+                    unique: true
+                  autoIncrement: true
+              - column:
+                  name: transaction_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: type
+                  type: varchar(15)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: recipient_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: message
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: delivered
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+
+        - addUniqueConstraint:
+            constraintName: uk_notifications_transaction_id_type
+            tableName: notifications
+            columnNames: transaction_id, type
+
+      rollback:
+        - dropUniqueConstraint:
+            tableName: notifications
+            constraintName: uk_notifications_transaction_id_type
+        - dropTable:
+            tableName: notifications
