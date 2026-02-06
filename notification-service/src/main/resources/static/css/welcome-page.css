@@ -1,0 +1,26 @@
+#notification-container {
+    scroll-snap-type: y mandatory;
+}
+
+#notification-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+#notification-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+#notification-container::-webkit-scrollbar-thumb {
+    background: rgba(72, 132, 88, 0.5);
+    border-radius: 10px;
+}
+
+#notification-container::-webkit-scrollbar-thumb:hover {
+    background: #ffffff;
+}
+
+.notification-item {
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+}
