@@ -12,7 +12,7 @@
 
     <groupId>com.pitisha.project.mybank</groupId>
     <artifactId>account-service</artifactId>
-    <version>0.3.0</version>
+    <version>0.4.0</version>
 
     <name>Account service</name>
     <description>Provided account management and balance operations API</description>
@@ -108,7 +108,7 @@
         <dependency>
             <groupId>com.pitisha.project.mybank</groupId>
             <artifactId>common</artifactId>
-            <version>0.0.1</version>
+            <version>0.1.0</version>
         </dependency>
     </dependencies>
 

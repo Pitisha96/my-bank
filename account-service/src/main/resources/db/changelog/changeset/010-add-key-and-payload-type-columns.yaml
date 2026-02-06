@@ -1,0 +1,39 @@
+databaseChangeLog:
+  - changeSet:
+      id: 010-add-key-and-payload-type-columns
+      author: pitosha96
+      context: dev
+
+      preConditions:
+        - dbms:
+            type: postgresql
+        - tableExists:
+            tableName: accounts_outbox
+        - not:
+            columnExists:
+              columnName: key
+        - not:
+            columnExists:
+              columnName: payload_type
+
+      changes:
+        - addColumn:
+            tableName: accounts_outbox
+            columns:
+              - column:
+                  name: key
+                  type: varchar(100)
+              - column:
+                  name: payload_type
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+
+      rollback:
+        - dropColumn:
+            tableName: accounts_outbox
+            columns:
+              - column:
+                  name: key
+              - column:
+                  name: payload_type

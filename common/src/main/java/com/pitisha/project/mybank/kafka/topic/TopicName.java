@@ -1,9 +1,8 @@
 package com.pitisha.project.mybank.kafka.topic;
 
 public enum TopicName {
-    ACCOUNT_CREATED_TOPIC("account-created-topic"),
-    ACCOUNT_WITHDRAWN_TOPIC("account-withdrawn-topic"),
-    ACCOUNT_CREDITED_TOPIC("account-credited-topic");
+    ACCOUNT_OPERATIONS_TOPIC("account-operations-topic"),
+    ACCOUNT_CREATED_TOPIC("account-created-topic");
 
     private final String topicName;
 
