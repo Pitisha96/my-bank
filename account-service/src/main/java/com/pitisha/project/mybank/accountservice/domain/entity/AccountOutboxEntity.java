@@ -33,6 +33,12 @@ public class AccountOutboxEntity {
     @Column(nullable = false, length = 100)
     private String topic;
 
+    @Column(length = 100)
+    private String key;
+
+    @Column(nullable = false)
+    private String payloadType;
+
     @JdbcType(PostgreSQLJsonPGObjectJsonType.class)
     @Column(nullable = false, columnDefinition = "json")
     private String payload;

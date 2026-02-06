@@ -6,8 +6,8 @@ import static com.pitisha.project.mybank.accountservice.domain.entity.AccountOpe
 import static com.pitisha.project.mybank.accountservice.domain.entity.AccountOperationType.WITHDRAW;
 import static com.pitisha.project.mybank.accountservice.domain.util.ArgumentValidationUtils.requireNonNullOrElseThrow;
 import static com.pitisha.project.mybank.accountservice.domain.util.ArgumentValidationUtils.requirePositiveAmount;
-import static com.pitisha.project.mybank.kafka.topic.TopicName.ACCOUNT_CREDITED_TOPIC;
-import static com.pitisha.project.mybank.kafka.topic.TopicName.ACCOUNT_WITHDRAWN_TOPIC;
+import static com.pitisha.project.mybank.kafka.topic.TopicName.ACCOUNT_OPERATIONS_TOPIC;
+import static java.math.RoundingMode.HALF_UP;
 import static java.util.Objects.isNull;
 
 import com.pitisha.project.mybank.accountservice.domain.entity.AccountEntity;
@@ -105,11 +105,7 @@ public class AccountOperationServiceImpl implements AccountOperationService {
         }
         account.setReserved(account.getReserved().subtract(exchanged));
         account.setBalance(account.getBalance().subtract(exchanged));
-        final var outbox = new AccountOutboxEntity();
-        outbox.setTopic(ACCOUNT_WITHDRAWN_TOPIC.getTopicName());
-        outbox.setPayload(jsonMapper.writeValueAsString(
-                new AccountWithdrawnEvent(op.getAccountId(), account.getOwnerId(), op.getCurrency(), op.getAmount())
-        ));
+        final var outbox = createWithdrawnEvent(account.getOwnerId(), op);
         accountRepository.save(account);
         accountsOutboxRepository.save(outbox);
         logCompletion(WITHDRAW, txId, op.getAccountId());
@@ -153,11 +149,7 @@ public class AccountOperationServiceImpl implements AccountOperationService {
         }
         final BigDecimal exchanged = exchangeService.exchange(amount, currency, account.getCurrency());
         account.setBalance(account.getBalance().add(exchanged));
-        final var outbox = new AccountOutboxEntity();
-        outbox.setTopic(ACCOUNT_CREDITED_TOPIC.getTopicName());
-        outbox.setPayload(jsonMapper.writeValueAsString(
-                new AccountCreditedEvent(accountId, account.getOwnerId(), currency, amount)
-        ));
+        final var outbox = createCreditedEvent(txId, accountId, account.getOwnerId(), currency, amount);
         accountRepository.save(account);
         accountsOutboxRepository.save(outbox);
     }
@@ -204,5 +196,35 @@ public class AccountOperationServiceImpl implements AccountOperationService {
                                final UUID transactionId,
                                final UUID accountId) {
         log.info(COMPLETED, op.name(), transactionId, accountId);
+    }
+
+    private AccountOutboxEntity createWithdrawnEvent(final UUID ownerId, final AccountOperationEntity op) {
+        final var event = new AccountWithdrawnEvent(
+            op.getTransactionId(),
+            op.getAccountId(),
+            ownerId,
+            op.getCurrency(),
+            op.getAmount().setScale(2, HALF_UP)
+        );
+        final var outbox = new AccountOutboxEntity();
+        outbox.setTopic(ACCOUNT_OPERATIONS_TOPIC.getTopicName());
+        outbox.setKey(ownerId.toString());
+        outbox.setPayloadType(event.getClass().getName());
+        outbox.setPayload(jsonMapper.writeValueAsString(event));
+        return outbox;
+    }
+
+    private AccountOutboxEntity createCreditedEvent(final UUID txId,
+                                                    final UUID accountId,
+                                                    final UUID ownerId,
+                                                    final AccountCurrency currency,
+                                                    final BigDecimal amount) {
+        final var event = new AccountCreditedEvent(txId, accountId, ownerId, currency, amount.setScale(2, HALF_UP));
+        final var outbox = new AccountOutboxEntity();
+        outbox.setTopic(ACCOUNT_OPERATIONS_TOPIC.getTopicName());
+        outbox.setKey(ownerId.toString());
+        outbox.setPayloadType(event.getClass().getName());
+        outbox.setPayload(jsonMapper.writeValueAsString(event));
+        return outbox;
     }
 }

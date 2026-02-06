@@ -1,8 +1,7 @@
 package com.pitisha.project.mybank.accountservice.config;
 
 import static com.pitisha.project.mybank.kafka.topic.TopicName.ACCOUNT_CREATED_TOPIC;
-import static com.pitisha.project.mybank.kafka.topic.TopicName.ACCOUNT_CREDITED_TOPIC;
-import static com.pitisha.project.mybank.kafka.topic.TopicName.ACCOUNT_WITHDRAWN_TOPIC;
+import static com.pitisha.project.mybank.kafka.topic.TopicName.ACCOUNT_OPERATIONS_TOPIC;
 import static org.apache.kafka.clients.producer.ProducerConfig.ACKS_CONFIG;
 import static org.apache.kafka.clients.producer.ProducerConfig.BOOTSTRAP_SERVERS_CONFIG;
 import static org.apache.kafka.clients.producer.ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG;
@@ -13,12 +12,9 @@ import static org.apache.kafka.clients.producer.ProducerConfig.REQUEST_TIMEOUT_M
 import static org.apache.kafka.clients.producer.ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG;
 import static org.springframework.kafka.config.TopicBuilder.name;
 
-import com.pitisha.project.mybank.accountservice.config.props.OutboxTopicProperties;
-import com.pitisha.project.mybank.kafka.event.AccountKafkaEvent;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
@@ -30,7 +26,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
-@EnableConfigurationProperties(OutboxTopicProperties.class)
 public class KafkaConfig {
 
     @Value("${KAFKA_BOOTSTRAP_SERVERS:localhost:9092,localhost:9093}")
@@ -45,31 +40,21 @@ public class KafkaConfig {
                 .build();
     }
 
-    @Bean
-    public NewTopic createAccountCreditedTopic() {
-        return name(ACCOUNT_CREDITED_TOPIC.getTopicName())
-                .partitions(3)
-                .replicas(3)
-                .configs(Map.of("min.insync.replicas", "2"))
-                .build();
+    @Bean NewTopic accountOperationsTopic() {
+        return name(ACCOUNT_OPERATIONS_TOPIC.getTopicName())
+            .partitions(3)
+            .replicas(3)
+            .configs(Map.of("min.insync.replicas", "2"))
+            .build();
     }
 
     @Bean
-    public NewTopic createAccountWithdrawnTopic() {
-        return name(ACCOUNT_WITHDRAWN_TOPIC.getTopicName())
-                .partitions(3)
-                .replicas(3)
-                .configs(Map.of("min.insync.replicas", "2"))
-                .build();
-    }
-
-    @Bean
-    public KafkaTemplate<String, AccountKafkaEvent> kafkaTemplate(final ProducerFactory<String, AccountKafkaEvent> producerFactory) {
+    public KafkaTemplate<String, Object> kafkaTemplate(final ProducerFactory<String, Object> producerFactory) {
         return new KafkaTemplate<>(producerFactory);
     }
 
     @Bean
-    public ProducerFactory<String, AccountKafkaEvent> producerFactory() {
+    public ProducerFactory<String, Object> producerFactory() {
         return new DefaultKafkaProducerFactory<>(producerConfigs());
     }
 

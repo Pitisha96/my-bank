@@ -6,8 +6,9 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 public record AccountWithdrawnEvent(
+        UUID transactionId,
         UUID accountId,
         UUID ownerId,
         AccountCurrency currency,
         BigDecimal amount
-) implements AccountKafkaEvent { }
+) { }

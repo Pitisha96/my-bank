@@ -8,4 +8,4 @@ public record AccountCreatedEvent(
         UUID accountId,
         UUID ownerId,
         AccountCurrency currency
-) implements AccountKafkaEvent { }
+) { }
