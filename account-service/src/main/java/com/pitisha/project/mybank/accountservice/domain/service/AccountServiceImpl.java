@@ -5,8 +5,6 @@ import static com.pitisha.project.mybank.accountservice.domain.entity.AccountSta
 import static com.pitisha.project.mybank.accountservice.domain.entity.specification.AccountSpecification.withFilter;
 import static com.pitisha.project.mybank.accountservice.domain.util.ArgumentValidationUtils.requireNonNullOrElseThrow;
 import static com.pitisha.project.mybank.kafka.topic.TopicName.ACCOUNT_CREATED_TOPIC;
-import static java.util.Objects.compare;
-import static java.util.Objects.nonNull;
 
 import com.pitisha.project.mybank.accountservice.api.dto.request.AccountFilter;
 import com.pitisha.project.mybank.accountservice.api.dto.response.AccountPageResponse;
@@ -14,7 +12,6 @@ import com.pitisha.project.mybank.accountservice.api.dto.response.AccountRespons
 import com.pitisha.project.mybank.accountservice.domain.entity.AccountEntity;
 import com.pitisha.project.mybank.accountservice.domain.entity.AccountOutboxEntity;
 import com.pitisha.project.mybank.accountservice.domain.entity.AccountStatus;
-import com.pitisha.project.mybank.accountservice.domain.exception.ValidationException;
 import com.pitisha.project.mybank.accountservice.domain.repository.AccountRepository;
 import com.pitisha.project.mybank.accountservice.domain.repository.AccountsOutboxRepository;
 import com.pitisha.project.mybank.accountservice.domain.exception.IllegalBalanceStateException;
@@ -35,8 +32,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -51,8 +46,6 @@ public class AccountServiceImpl implements AccountService {
     private static final String CURRENCY_MUST_NOT_BE_NULL = "account currency must not be null";
     private static final String STATUS_MUST_NOT_BE_NULL = "account status must not be null";
     private static final String ACCOUNT_WITH_NUMBER_IS_NOT_DEFINED = "account with number %s is not defined";
-    private static final String BALANCE_ERROR_MESSAGE = "balanceFrom must not be greater than balanceTo";
-    private static final String CREATED_ERROR_MESSAGE = "createdFrom must not be after createdTo";
     private static final String CANNOT_CLOSE_ACCOUNT_WITH_RESERVED_FUNDS = "cannot close account with reserved funds";
     private static final String ACCOUNT_ALREADY_CLOSED = "account is already closed";
     private final AccountRepository accountRepository;
@@ -64,7 +57,6 @@ public class AccountServiceImpl implements AccountService {
     @Transactional(readOnly = true)
     @Override
     public AccountPageResponse findAll(final AccountFilter filter) {
-        validateFilter(filter);
         final Page<AccountResponse> page = accountRepository.findAll(withFilter(filter), PageRequest.of(filter.page(), filter.pageSize()))
                 .map(accountMapper::entityToDto);
         return new AccountPageResponse(page.getContent(), page.getTotalPages(), page.getNumber(), page.getSize());
@@ -148,18 +140,5 @@ public class AccountServiceImpl implements AccountService {
         }
         entity.setStatus(status);
         return accountMapper.entityToDto(accountRepository.save(entity));
-    }
-
-    private void validateFilter(final AccountFilter filter) {
-        final var balanceFrom = filter.balanceFrom();
-        final var balanceTo = filter.balanceTo();
-        final var createdFrom = filter.createdFrom();
-        final var createdTo = filter.createdTo();
-        if (nonNull(balanceFrom) && nonNull(balanceTo) && compare(balanceFrom, balanceTo, BigDecimal::compareTo) > 0) {
-            throw new ValidationException(BALANCE_ERROR_MESSAGE);
-        }
-        if (nonNull(createdFrom) && nonNull(createdTo) && compare(createdFrom, createdTo, LocalDate::compareTo) > 0) {
-            throw new ValidationException(CREATED_ERROR_MESSAGE);
-        }
     }
 }

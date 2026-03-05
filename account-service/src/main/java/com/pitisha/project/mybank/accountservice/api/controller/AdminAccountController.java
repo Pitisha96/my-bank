@@ -7,13 +7,10 @@ import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.ResponseEntity.created;
 import static org.springframework.http.ResponseEntity.ok;
 
-import com.pitisha.project.mybank.accountservice.api.dto.request.AccountFilter;
 import com.pitisha.project.mybank.accountservice.api.dto.request.CreateAccountRequest;
-import com.pitisha.project.mybank.accountservice.api.dto.response.AccountPageResponse;
 import com.pitisha.project.mybank.accountservice.api.dto.response.AccountResponse;
 import com.pitisha.project.mybank.accountservice.domain.service.AccountService;
 import com.pitisha.project.mybank.accountservice.domain.exception.ResourceNotFoundException;
-import com.pitisha.project.mybank.domain.entity.AccountCurrency;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -39,27 +36,21 @@ public class AdminAccountController extends AbstractAccountController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping
-    public ResponseEntity<AccountPageResponse> findAccounts(@Validated final AccountFilter params) {
-        return ok(accountService.findAll(params));
-    }
-
-    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{number}")
     public ResponseEntity<AccountResponse> findAccountByNumber(final @PathVariable UUID number) {
         return accountService.findByNumber(number)
                 .map(ResponseEntity::ok)
-                .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_WITH_NUMBER_IS_NOT_DEFINED));
+                .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_WITH_NUMBER_IS_NOT_DEFINED.formatted(number)));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<AccountResponse> createAccount(final JwtAuthenticationToken token,
-                                                         @RequestBody@Validated final CreateAccountRequest request) {
+                                                         @RequestBody @Validated final CreateAccountRequest request) {
         if (request.ownerId().equals(getCurrentUserIdFromToken(token))) {
             return ResponseEntity.status(FORBIDDEN).build();
         }
-        final AccountResponse resp = accountService.create(request.ownerId(), AccountCurrency.valueOf(request.currency()));
+        final AccountResponse resp = accountService.create(request.ownerId(), request.currency());
         return created(createLocation(resp.number())).body(resp);
     }
 

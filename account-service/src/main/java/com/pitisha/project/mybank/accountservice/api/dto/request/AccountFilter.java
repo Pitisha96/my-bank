@@ -1,8 +1,8 @@
 package com.pitisha.project.mybank.accountservice.api.dto.request;
 
-import com.pitisha.project.mybank.accountservice.api.validation.ValidEnum;
 import com.pitisha.project.mybank.accountservice.domain.entity.AccountStatus;
 import com.pitisha.project.mybank.domain.entity.AccountCurrency;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
@@ -17,15 +17,17 @@ public record AccountFilter(
 
         UUID ownerId,
 
-        @ValidEnum(enumClass = AccountCurrency.class)
-        String currency,
+        AccountCurrency currency,
 
+        @PositiveOrZero
+        @Digits(integer = 18, fraction = 2)
         BigDecimal balanceFrom,
 
+        @PositiveOrZero
+        @Digits(integer = 18, fraction = 2)
         BigDecimal balanceTo,
 
-        @ValidEnum(enumClass = AccountStatus.class)
-        String status,
+        AccountStatus status,
 
         @PastOrPresent
         LocalDate createdFrom,

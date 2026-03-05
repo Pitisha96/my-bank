@@ -1,6 +1,5 @@
 package com.pitisha.project.mybank.accountservice.api.controller;
 
-import static com.pitisha.project.mybank.domain.entity.AccountCurrency.valueOf;
 import static java.util.UUID.fromString;
 import static org.apache.logging.log4j.util.Strings.isBlank;
 import static org.springframework.http.ResponseEntity.accepted;
@@ -31,7 +30,7 @@ public class InternalController {
                                         @PathVariable final UUID number,
                                         @PathVariable final UUID transactionId,
                                         @Validated @RequestBody final AmountRequest request) {
-        accountOperationService.reserve(parseUUID(xUserId), transactionId, number, request.amount(), valueOf(request.currency()));
+        accountOperationService.reserve(parseUUID(xUserId), transactionId, number, request.amount(), request.currency());
         return accepted().build();
     }
 
@@ -52,7 +51,7 @@ public class InternalController {
                                        @PathVariable final UUID number,
                                        @PathVariable final UUID transactionId,
                                        @Validated @RequestBody final AmountRequest request) {
-        accountOperationService.credit(parseUUID(xUserId), transactionId, number, request.amount(), valueOf(request.currency()));
+        accountOperationService.credit(parseUUID(xUserId), transactionId, number, request.amount(), request.currency());
         return accepted().build();
     }
 
