@@ -4,6 +4,8 @@ import static java.util.stream.Stream.concat;
 import static org.springframework.security.config.Customizer.withDefaults;
 import static org.springframework.security.config.http.SessionCreationPolicy.STATELESS;
 
+import com.pitisha.project.mybank.accountservice.api.security.RestAccessDeniedHandler;
+import com.pitisha.project.mybank.accountservice.api.security.RestAuthenticationEntryPoint;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -24,7 +26,9 @@ public class WebSecurityConfig {
     private static final String ROLE_PREFIX = "ROLE_";
 
     @Bean
-    public SecurityFilterChain securityFilterChain(final HttpSecurity http) {
+    public SecurityFilterChain securityFilterChain(final HttpSecurity http,
+                                                   final RestAuthenticationEntryPoint authenticationEntryPoint,
+                                                   final RestAccessDeniedHandler accessDeniedHandler) {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
@@ -34,7 +38,11 @@ public class WebSecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(STATELESS))
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(withDefaults()))
+                .oauth2ResourceServer(oauth2 -> oauth2
+                    .jwt(withDefaults())
+                    .authenticationEntryPoint(authenticationEntryPoint)
+                    .accessDeniedHandler(accessDeniedHandler)
+                )
                 .build();
     }
 

@@ -2,9 +2,15 @@ package com.pitisha.project.mybank.accountservice.api.dto.response;
 
 public enum ErrorCode {
 
+    UNAUTHORIZED,
+    FORBIDDEN,
     VALIDATION_ERROR,
+    INVALID_PARAMETER,
+    MISSING_PARAMETER,
+    INVALID_REQUEST_BODY,
     RESOURCE_NOT_FOUND,
     ILLEGAL_STATUS_STATE,
     ILLEGAL_BALANCE_STATE,
-    ILLEGAL_OPERATION_ORDER
+    ILLEGAL_OPERATION_ORDER,
+    INTERNAL_SERVER_ERROR
 }
