@@ -108,6 +108,7 @@ public class AccountServiceImpl implements AccountService {
 
         final var outbox = new AccountOutboxEntity();
         outbox.setTopic(ACCOUNT_CREATED_TOPIC.getTopicName());
+        outbox.setPayloadType(AccountCreatedEvent.class.getName());
         outbox.setPayload(jsonMapper.writeValueAsString(
                 new AccountCreatedEvent(
                         entity.getNumber(),
