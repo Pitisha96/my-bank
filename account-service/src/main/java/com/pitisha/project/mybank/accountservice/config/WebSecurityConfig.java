@@ -34,8 +34,15 @@ public class WebSecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/internal**").hasAuthority("SCOPE_accounts")
-                        .anyRequest().authenticated()
+                    .requestMatchers(
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
+                        "/v3/api-docs/**",
+                        "/openapi.yaml",
+                        "/favicon.ico"
+                    ).permitAll()
+                    .requestMatchers("/api/v1/internal**").hasAuthority("SCOPE_accounts")
+                    .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(STATELESS))
                 .oauth2ResourceServer(oauth2 -> oauth2

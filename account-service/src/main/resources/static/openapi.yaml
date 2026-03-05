@@ -1,0 +1,330 @@
+openapi: 3.1.0
+info:
+  title: Account Service API
+  version: 0.5.0-SNAPSHOT
+  description: Provides account management API
+  contact:
+    name: Ilya Petrovsky
+    email: petrikin1996@gmail.com
+
+servers:
+  - url: http://localhost:8081
+    description: Account service
+
+security:
+  - keycloak: []
+
+tags:
+  - name: Accounts
+    description: Provides account management endpoints
+
+paths:
+  /api/v1/accounts:
+    get:
+      tags:
+        - Accounts
+      summary: Get filtered accounts
+      description: Provides page with filtered accounts
+      operationId: findAccounts
+      parameters:
+        - name: ownerId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+            description: Filtering by account owner
+            example: 48724eb5-d10a-4817-9ade-bb84f0001075
+        - name: currency
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/AccountCurrency'
+            description: Filtering by account currency
+        - name: balanceFrom
+          in: query
+          required: false
+          schema:
+            type: number
+            format: decimal
+            exclusiveMinimum: 0
+            maximum: 999999999999999999.99
+            example: 100.99
+            description: Filtering by account amount (from)
+        - name: balanceTo
+          in: query
+          required: false
+          schema:
+            type: number
+            format: decimal
+            exclusiveMinimum: 0
+            maximum: 999999999999999999.99
+            example: 999.99
+            description: Filtering by account amount (to)
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/AccountStatus'
+            description: Filtering by account status
+        - name: createdFrom
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+            description: Filtering by account creation date (from). Must be past or present
+            example: "2026-02-16"
+        - name: createdTo
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+            description: Filtering by account creation date (to). Must be past or present
+            example: "2026-02-20"
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+            nullable: false
+            minimum: 0
+            description: Filtering result page number
+            example: 0
+        - name: pageSize
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+            nullable: false
+            minimum: 1
+            maximum: 50
+            description: Filtering result page size
+            example: 50
+      security:
+        - keycloak:
+            - openid
+      responses:
+        200:
+          description: Getting accounts has been completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountPageResponse'
+        400:
+          $ref: "#/components/responses/ValidationError"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        403:
+          $ref: "#/components/responses/ForbiddenError"
+        500:
+          $ref: "#/components/responses/InternalServerError"
+
+components:
+  responses:
+    UnauthorizedError:
+      description: Returns when the user is unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            errorCode: UNAUTHORIZED
+            message: Unauthorized
+            details: null
+            timestamp: "2026-02-20T11:31:30.2574401"
+
+    ForbiddenError:
+      description: Returns when the user does not have permissions to the resource.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            errorCode: FORBIDDEN
+            message: Forbidden
+            details: null
+            timestamp: 2026-02-20T11:43:10.6274573
+
+    ValidationError:
+      description: Returns when request param is invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            errorCode: VALIDATION_ERROR
+            message: Validation error
+            details:
+              page: cannot be null
+            timestamp: 2026-02-20T11:31:30.2574401
+
+    InternalServerError:
+      description: Returns when something went wrong
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            errorCode: INTERNAL_SERVER_ERROR
+            message: Internal Server Error
+            details: null
+            timestamp: 2026-02-20T11:31:30.2574401
+
+  schemas:
+    AccountCurrency:
+      type: string
+      description: Account currency
+      enum:
+        - BYN
+        - USD
+        - EUR
+        - RUB
+      example: BYN
+
+    AccountStatus:
+      type: string
+      description: Account status
+      enum:
+        - ACTIVE
+        - BLOCKED
+        - CLOSED
+      example: ACTIVE
+
+    ErrorCode:
+      type: string
+      description: Application error code
+      enum:
+        - UNAUTHORIZED
+        - FORBIDDEN
+        - VALIDATION_ERROR
+        - INVALID_PARAMETER
+        - MISSING_PARAMETER
+        - INVALID_REQUEST_BODY
+        - RESOURCE_NOT_FOUND
+        - ILLEGAL_STATUS_STATE
+        - ILLEGAL_BALANCE_STATE
+        - ILLEGAL_OPERATION_ORDER
+        - INTERNAL_SERVER_ERROR
+      example: VALIDATION_ERROR
+
+    AccountResponse:
+      type: object
+      description: Account info
+      required:
+        - number
+        - ownerID
+        - currency
+        - balance
+        - status
+        - createdAt
+      properties:
+        number:
+          type: string
+          format: uuid
+          example: 48724eb5-d10a-4817-9ade-bb84f0001075
+          description: Account id (number)
+        ownerID:
+          type: string
+          format: uuid
+          example: 375cf951-6467-4b70-b51a-ef0e060f9784
+          description: The id of the user who owns this account
+        currency:
+          allOf:
+            - $ref: '#/components/schemas/AccountCurrency'
+          description: The currency in which the funds are held in the account
+        balance:
+          type: number
+          format: decimal
+          example: 999.99
+          min: 0
+          max: 999999999999999999.99
+          description: Account balance
+        status:
+          allOf:
+            - $ref: '#/components/schemas/AccountStatus'
+          description: Account status
+        createdAt:
+          type: string
+          format: date-time
+          example: 2026-02-16T14:30:00
+          description: Account creation datetime
+
+    AccountPageResponse:
+      type: object
+      description: Page with accounts
+      required:
+        - data
+        - totalPages
+        - currentPage
+        - pageSize
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountResponse"
+          minItems: 0
+          maxItems: 50
+          description: Filtered accounts
+        totalPages:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Number of all pages
+          example: 1
+        currentPage:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Number of current page
+          example: 0
+        pageSize:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 50
+          description: Max number of accounts on page
+          example: 50
+
+    ErrorResponse:
+      type: object
+      description: Error response with the detailed status and messages
+      required:
+        - errorCode
+        - message
+        - timestamp
+      properties:
+        errorCode:
+          allOf:
+            - $ref: '#/components/schemas/ErrorCode'
+          description: Detailed application error code
+        message:
+          type: string
+          description: Error message
+          example: Validation error
+        details:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Detailed messages
+          example:
+            id: cannot be null
+            name: cannot be empty
+        timestamp:
+          type: string
+          format: date-time
+          description: Error datetime
+          example: 2026-02-16T14:30:00
+
+  securitySchemes:
+    keycloak:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: http://localhost:8080/realms/my-bank-realm/protocol/openid-connect/auth
+          tokenUrl: http://localhost:8080/realms/my-bank-realm/protocol/openid-connect/token
+          scopes:
+            openid: openid
