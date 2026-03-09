@@ -16,15 +16,12 @@ spring:
     open-in-view: false
     properties:
       hibernate:
-        default_schema: account_service
         type:
           json_format_mapper: com.pitisha.project.mybank.accountservice.domain.entity.mapper.CustomJsonFormatMapper
 
   liquibase:
     enabled: true
     contexts: dev
-    default-schema: account_service
-    liquibase-schema: account_service
 
   data:
     redis:
