@@ -27,7 +27,7 @@ public class InternalController {
 
     @PostMapping("/accounts/{number}/operations/{transactionId}/reserve")
     public ResponseEntity<Void> reserve(@RequestHeader(value = "X-User-Id", required = false) final String xUserId,
-                                        @PathVariable final UUID number,
+                                        @PathVariable final String number,
                                         @PathVariable final UUID transactionId,
                                         @Validated @RequestBody final AmountRequest request) {
         accountOperationService.reserve(parseUUID(xUserId), transactionId, number, request.amount(), request.currency());
@@ -48,7 +48,7 @@ public class InternalController {
 
     @PostMapping("/accounts/{number}/operations/{transactionId}/credit")
     public ResponseEntity<Void> credit(@RequestHeader(value = "X-User-Id", required = false) final String xUserId,
-                                       @PathVariable final UUID number,
+                                       @PathVariable final String number,
                                        @PathVariable final UUID transactionId,
                                        @Validated @RequestBody final AmountRequest request) {
         accountOperationService.credit(parseUUID(xUserId), transactionId, number, request.amount(), request.currency());

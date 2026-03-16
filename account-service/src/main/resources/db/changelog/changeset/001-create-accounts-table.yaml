@@ -16,11 +16,20 @@ databaseChangeLog:
             tableName: accounts
             columns:
               - column:
-                  name: number
+                  name: id
                   type: uuid
                   defaultValueComputed: gen_random_uuid()
                   constraints:
                     primaryKey: true
+              - column:
+                  name: number
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: number_hash
+                  type: varchar(255)
+                  constraints:
                     nullable: false
                     unique: true
               - column:
@@ -30,27 +39,32 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: currency
-                  type: varchar(3)
+                  type: varchar(4)
                   constraints:
                     nullable: false
               - column:
                   name: balance
-                  type: decimal(18,2)
+                  type: numeric(19,4)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reserved
+                  type: numeric(19,4)
                   constraints:
                     nullable: false
               - column:
                   name: status
-                  type: varchar(7)
+                  type: varchar(10)
                   constraints:
                     nullable: false
               - column:
                   name: created_at
-                  type: timestamp
+                  type: timestamptz
                   constraints:
                     nullable: false
               - column:
                   name: updated_at
-                  type: timestamp
+                  type: timestamptz
                   constraints:
                     nullable: false
 

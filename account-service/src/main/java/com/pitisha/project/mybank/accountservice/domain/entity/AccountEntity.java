@@ -5,10 +5,12 @@ import static com.pitisha.project.mybank.accountservice.domain.entity.AccountSta
 import static jakarta.persistence.EnumType.STRING;
 import static jakarta.persistence.GenerationType.UUID;
 import static java.math.BigDecimal.ZERO;
-import static java.time.LocalDateTime.now;
+import static java.time.OffsetDateTime.now;
 
+import com.pitisha.project.mybank.accountservice.domain.entity.converter.AccountNumberConverter;
 import com.pitisha.project.mybank.domain.entity.AccountCurrency;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
@@ -16,14 +18,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
@@ -36,40 +37,42 @@ public class AccountEntity {
 
     @Id
     @GeneratedValue(strategy = UUID)
+    private UUID id;
+
+    @Convert(converter = AccountNumberConverter.class)
+    @Column(nullable = false)
+    private String number;
+
     @Column(nullable = false, unique = true)
-    private UUID number;
+    private String numberHash;
 
     @Column(nullable = false)
     private UUID ownerId;
 
-    @Column(nullable = false, length = 16)
+    @Column(nullable = false, length = 4)
     @Enumerated(STRING)
     private AccountCurrency currency;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal balance = ZERO;
 
-    @Column
+    @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal reserved = ZERO;
 
-    @Column(nullable = false, length = 7)
+    @Column(nullable = false, length = 10)
     @Enumerated(STRING)
     private AccountStatus status;
 
     @Column(nullable = false)
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
 
     @Column(nullable = false)
-    private LocalDateTime updatedAt;
-
-    @Version
-    private Long version;
+    private OffsetDateTime updatedAt;
 
     @PrePersist
     private void setCreationDateTime() {
         createdAt = now();
         updatedAt = now();
-        version = 0L;
     }
 
     @PreUpdate

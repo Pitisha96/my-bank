@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-create-account-number-sequence
+      author: pitosha96
+      context: dev
+
+      preConditions:
+        - dbms:
+            type: postgresql
+        - not:
+            sequenceExists:
+              sequenceName: account_number_seq
+
+      changes:
+        - createSequence:
+            sequenceName: account_number_seq
+            startValue: 1
+            incrementBy: 1
+            maxValue: 9999999
+
+      rollback:
+        - dropSequence:
+            sequenceName: account_number_seq

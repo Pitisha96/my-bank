@@ -20,11 +20,11 @@ public record AccountFilter(
         AccountCurrency currency,
 
         @PositiveOrZero
-        @Digits(integer = 18, fraction = 2)
+        @Digits(integer = 19, fraction = 2)
         BigDecimal balanceFrom,
 
         @PositiveOrZero
-        @Digits(integer = 18, fraction = 2)
+        @Digits(integer = 19, fraction = 2)
         BigDecimal balanceTo,
 
         AccountStatus status,

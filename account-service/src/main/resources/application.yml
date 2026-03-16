@@ -58,3 +58,6 @@ springdoc:
     oauth:
       client-id: ${ACCOUNT_SERVICE_SWAGGER_CLIENT_ID}
       use-pkce-with-authorization-code-grant: true
+
+app:
+  bik: ${BIK}

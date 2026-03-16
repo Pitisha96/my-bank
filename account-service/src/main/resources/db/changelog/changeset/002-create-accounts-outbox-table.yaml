@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: 003-create-accounts-outbox-table
+      id: 002-create-accounts-outbox-table
       author: pitosha96
       context: dev
 
@@ -20,11 +20,19 @@ databaseChangeLog:
                   type: bigserial
                   constraints:
                     primaryKey: true
-                    nullable: false
-                    unique: true
               - column:
                   name: topic
                   type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: key
+                  type: varchar(100)
+                  constraints:
+                    nullable: true
+              - column:
+                  name: payload_type
+                  type: varchar(255)
                   constraints:
                     nullable: false
               - column:
@@ -40,7 +48,7 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: created_at
-                  type: timestamp
+                  type: timestamptz
                   constraints:
                     nullable: false
 

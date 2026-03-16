@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: 005-create-account-operations-table
+      id: 003-create-account-operations-table
       author: pitosha96
       context: dev
 
@@ -17,12 +17,9 @@ databaseChangeLog:
             columns:
               - column:
                   name: id
-                  type: bigint
+                  type: bigserial
                   constraints:
                     primaryKey: true
-                    nullable: false
-                    unique: true
-                  autoIncrement: true
               - column:
                   name: transaction_id
                   type: uuid
@@ -40,14 +37,17 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: amount
-                  type: decimal(18,2)
+                  type: numeric(19,4)
                   constraints:
                     nullable: false
-                    checkConstraint: amount > 0
+              - column:
+                  name: currency
+                  type: varchar(4)
+                  constraints:
+                    nullable: false
               - column:
                   name: created_at
-                  type: timestamp
-                  defaultValueComputed: CURRENT_TIMESTAMP
+                  type: timestamptz
                   constraints:
                     nullable: false
 

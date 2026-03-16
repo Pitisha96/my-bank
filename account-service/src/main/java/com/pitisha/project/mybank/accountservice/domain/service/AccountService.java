@@ -6,7 +6,6 @@ import com.pitisha.project.mybank.accountservice.api.dto.response.AccountPageRes
 import com.pitisha.project.mybank.accountservice.domain.entity.AccountStatus;
 import com.pitisha.project.mybank.domain.entity.AccountCurrency;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,11 +13,9 @@ public interface AccountService {
 
     AccountPageResponse findAll(AccountFilter filter);
 
-    Optional<AccountResponse> findByNumber(UUID number);
+    Optional<AccountResponse> findById(UUID id);
 
-    List<AccountResponse> findByOwnerId(UUID ownerId);
+    AccountResponse create(UUID ownerId, AccountCurrency currency);
 
-    AccountResponse create(UUID userId, AccountCurrency currency);
-
-    AccountResponse updateStatus(UUID number, AccountStatus status);
+    AccountResponse updateStatus(UUID id, AccountStatus status);
 }

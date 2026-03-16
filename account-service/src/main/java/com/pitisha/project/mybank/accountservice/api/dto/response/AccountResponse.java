@@ -4,14 +4,16 @@ import com.pitisha.project.mybank.accountservice.domain.entity.AccountStatus;
 import com.pitisha.project.mybank.domain.entity.AccountCurrency;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 public record AccountResponse(
-       UUID number,
+       UUID id,
+       String number,
        UUID ownerId,
-       AccountCurrency currency,
        BigDecimal balance,
+       AccountCurrency currency,
        AccountStatus status,
-       LocalDateTime createdAt
+       OffsetDateTime createdAt,
+       OffsetDateTime updatedAt
 ) { }

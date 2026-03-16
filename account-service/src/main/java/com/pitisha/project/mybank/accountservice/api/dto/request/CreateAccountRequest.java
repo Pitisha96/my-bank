@@ -7,7 +7,6 @@ import java.util.UUID;
 
 public record CreateAccountRequest(
 
-        @NotNull
         UUID ownerId,
 
         @NotNull

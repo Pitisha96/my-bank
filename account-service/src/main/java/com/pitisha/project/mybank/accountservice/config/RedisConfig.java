@@ -18,7 +18,6 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Configuration
@@ -26,8 +25,7 @@ import java.util.Map;
 public class RedisConfig {
 
     private static final String ACCOUNT_PAGES = "accountPages";
-    private static final String FIND_BY_NUMBER_ACCOUNTS = "findByNumberAccounts";
-    private static final String FIND_BY_OWNER_ID_ACCOUNTS = "findByOwnerIdAccounts";
+    private static final String FIND_BY_ID_ACCOUNTS = "findByIdAccounts";
 
     @Bean
     public CacheManager cacheManager(final RedisConnectionFactory connectionFactory, final JsonMapper jm) {
@@ -43,16 +41,12 @@ public class RedisConfig {
     }
 
     private Map<String, RedisCacheConfiguration> redisConfigs(final RedisCacheConfiguration defaultConfig, final JsonMapper jm) {
-        final var type = jm.getTypeFactory().constructCollectionType(List.class, AccountResponse.class);
         final Map<String, RedisCacheConfiguration> configs = new HashMap<>();
         configs.put(ACCOUNT_PAGES, defaultConfig.serializeValuesWith(
             fromSerializer(new JacksonJsonRedisSerializer<>(jm, AccountPageResponse.class))
         ));
-        configs.put(FIND_BY_NUMBER_ACCOUNTS, defaultConfig.serializeValuesWith(
+        configs.put(FIND_BY_ID_ACCOUNTS, defaultConfig.serializeValuesWith(
             fromSerializer(new JacksonJsonRedisSerializer<>(jm, AccountResponse.class))
-        ));
-        configs.put(FIND_BY_OWNER_ID_ACCOUNTS, defaultConfig.serializeValuesWith(
-            fromSerializer(new JacksonJsonRedisSerializer<>(jm, type))
         ));
         return configs;
     }

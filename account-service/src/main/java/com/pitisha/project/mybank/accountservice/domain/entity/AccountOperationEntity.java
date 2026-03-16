@@ -2,7 +2,7 @@ package com.pitisha.project.mybank.accountservice.domain.entity;
 
 import static jakarta.persistence.EnumType.STRING;
 import static jakarta.persistence.GenerationType.IDENTITY;
-import static java.time.LocalDateTime.now;
+import static java.time.OffsetDateTime.now;
 
 import com.pitisha.project.mybank.domain.entity.AccountCurrency;
 import jakarta.persistence.Column;
@@ -20,7 +20,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
@@ -43,7 +43,6 @@ public class AccountOperationEntity {
 
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(nullable = false, unique = true)
     private Long id;
 
     @Column(nullable = false)
@@ -57,15 +56,15 @@ public class AccountOperationEntity {
     private UUID accountId;
 
     @Positive
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal amount;
 
-    @Column(nullable = false, length = 3)
+    @Column(nullable = false, length = 4)
     @Enumerated(STRING)
     private AccountCurrency currency;
 
     @Column(nullable = false)
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
 
     @PrePersist
     private void onCreate() {

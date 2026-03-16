@@ -3,6 +3,7 @@ package com.pitisha.project.mybank.accountservice.domain.service;
 import static com.pitisha.project.mybank.accountservice.domain.entity.AccountStatus.ACTIVE;
 import static com.pitisha.project.mybank.accountservice.domain.entity.AccountStatus.CLOSED;
 import static com.pitisha.project.mybank.accountservice.domain.entity.specification.AccountSpecification.withFilter;
+import static com.pitisha.project.mybank.accountservice.domain.util.AccountNumberGenerator.generateAccountNumber;
 import static com.pitisha.project.mybank.accountservice.domain.util.ArgumentValidationUtils.requireNonNullOrElseThrow;
 import static com.pitisha.project.mybank.kafka.topic.TopicName.ACCOUNT_CREATED_TOPIC;
 
@@ -22,6 +23,7 @@ import com.pitisha.project.mybank.domain.entity.AccountCurrency;
 import com.pitisha.project.mybank.kafka.event.AccountCreatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -32,7 +34,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -42,16 +43,20 @@ import java.util.UUID;
 public class AccountServiceImpl implements AccountService {
 
     private static final String OWNER_ID_MUST_NOT_BE_NULL = "owner id must not be null";
-    private static final String ACCOUNT_NUMBER_MUST_NOT_BE_NULL = "account number must not be null";
+    private static final String ACCOUNT_ID_MUST_NOT_BE_NULL = "account id must not be null";
     private static final String CURRENCY_MUST_NOT_BE_NULL = "account currency must not be null";
     private static final String STATUS_MUST_NOT_BE_NULL = "account status must not be null";
-    private static final String ACCOUNT_WITH_NUMBER_IS_NOT_DEFINED = "account with number %s is not defined";
+    private static final String ACCOUNT_WITH_ID_IS_NOT_DEFINED = "account with id %s is not defined";
     private static final String CANNOT_CLOSE_ACCOUNT_WITH_RESERVED_FUNDS = "cannot close account with reserved funds";
     private static final String ACCOUNT_ALREADY_CLOSED = "account is already closed";
     private final AccountRepository accountRepository;
     private final AccountsOutboxRepository outboxRepository;
     private final AccountMapper accountMapper;
+    private final EncryptionService encryptionService;
     private final JsonMapper jsonMapper;
+
+    @Value("${app.bik}")
+    private String bik;
 
     @Cacheable(cacheNames = "accountPages", keyGenerator = "accountPageFilterKeyGenerator")
     @Transactional(readOnly = true)
@@ -62,73 +67,41 @@ public class AccountServiceImpl implements AccountService {
         return new AccountPageResponse(page.getContent(), page.getTotalPages(), page.getNumber(), page.getSize());
     }
 
-    @Cacheable(cacheNames = "findByNumberAccounts", key = "#number")
+    @Cacheable(cacheNames = "findByIdAccounts", key = "#id")
     @Transactional(readOnly = true)
     @Override
-    public Optional<AccountResponse> findByNumber(final UUID number) {
-        requireNonNullOrElseThrow(number, ACCOUNT_NUMBER_MUST_NOT_BE_NULL);
-        return accountRepository.findByNumber(number)
-                .map(accountMapper::entityToDto);
+    public Optional<AccountResponse> findById(final UUID id) {
+        requireNonNullOrElseThrow(id, ACCOUNT_ID_MUST_NOT_BE_NULL);
+        return accountRepository.findById(id)
+            .map(accountMapper::entityToDto);
     }
 
-    @Cacheable(cacheNames = "findByOwnerIdAccounts", key = "#ownerId")
-    @Transactional(readOnly = true)
-    @Override
-    public List<AccountResponse> findByOwnerId(final UUID ownerId) {
-        requireNonNullOrElseThrow(ownerId, OWNER_ID_MUST_NOT_BE_NULL);
-        return accountRepository.findByOwnerId(ownerId).stream()
-                .map(accountMapper::entityToDto)
-                .toList();
-    }
-
-    @Caching(
-            evict = {
-                    @CacheEvict(cacheNames = "accountPages", allEntries = true),
-                    @CacheEvict(cacheNames = "findByOwnerIdAccounts", key = "#ownerId")
-            }
-    )
+    @CacheEvict(cacheNames = "accountPages", allEntries = true)
     @Transactional
     @Override
     public AccountResponse create(final UUID ownerId, final AccountCurrency currency) {
         requireNonNullOrElseThrow(ownerId, OWNER_ID_MUST_NOT_BE_NULL);
         requireNonNullOrElseThrow(currency, CURRENCY_MUST_NOT_BE_NULL);
-        final var entity = new AccountEntity();
-        entity.setOwnerId(ownerId);
-        entity.setCurrency(currency);
-        entity.setStatus(ACTIVE);
+        final Long seq = accountRepository.getNextAccountNumber();
+        final String generatedNumber = generateAccountNumber(bik, currency, seq);
+        final AccountEntity entity = createAccount(generatedNumber, ownerId, currency);
         accountRepository.save(entity);
-
-        final var outbox = new AccountOutboxEntity();
-        outbox.setTopic(ACCOUNT_CREATED_TOPIC.getTopicName());
-        outbox.setPayloadType(AccountCreatedEvent.class.getName());
-        outbox.setPayload(jsonMapper.writeValueAsString(
-                new AccountCreatedEvent(
-                        entity.getNumber(),
-                        entity.getOwnerId(),
-                        entity.getCurrency()
-                )
-        ));
+        final AccountOutboxEntity outbox = createAccountCreatedOutbox(entity);
         outboxRepository.save(outbox);
-
         return accountMapper.entityToDto(entity);
     }
 
     @Caching(
-            evict = {
-                    @CacheEvict(cacheNames = "accountPages", allEntries = true),
-                    @CacheEvict(cacheNames = "findByOwnerIdAccounts", key = "#result.ownerId()")
-            },
-            put = {
-                    @CachePut(cacheNames = "findByNumberAccounts", key = "#number")
-            }
+            evict = @CacheEvict(cacheNames = "accountPages", allEntries = true),
+            put = @CachePut(cacheNames = "findByIdAccounts", key = "#id")
     )
     @Transactional
     @Override
-    public AccountResponse updateStatus(final UUID number, final AccountStatus status) {
-        requireNonNullOrElseThrow(number, ACCOUNT_NUMBER_MUST_NOT_BE_NULL);
+    public AccountResponse updateStatus(final UUID id, final AccountStatus status) {
+        requireNonNullOrElseThrow(id, ACCOUNT_ID_MUST_NOT_BE_NULL);
         requireNonNullOrElseThrow(status, STATUS_MUST_NOT_BE_NULL);
-        final var entity = accountRepository.findByNumberForUpdate(number)
-                .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_WITH_NUMBER_IS_NOT_DEFINED));
+        final var entity = accountRepository.findWithLockById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_WITH_ID_IS_NOT_DEFINED));
         if (status.equals(entity.getStatus())) {
             return accountMapper.entityToDto(entity);
         }
@@ -140,5 +113,28 @@ public class AccountServiceImpl implements AccountService {
         }
         entity.setStatus(status);
         return accountMapper.entityToDto(accountRepository.save(entity));
+    }
+
+    private AccountEntity createAccount(final String number, final UUID ownerId, final AccountCurrency currency) {
+        final var entity = new AccountEntity();
+        entity.setNumber(number);
+        entity.setNumberHash(encryptionService.generateHmac(number));
+        entity.setOwnerId(ownerId);
+        entity.setCurrency(currency);
+        entity.setStatus(ACTIVE);
+        return entity;
+    }
+
+    private AccountOutboxEntity createAccountCreatedOutbox(final AccountEntity entity) {
+        final var event = new AccountCreatedEvent(
+            entity.getId(),
+            entity.getOwnerId(),
+            entity.getCurrency()
+        );
+        final var outbox = new AccountOutboxEntity();
+        outbox.setTopic(ACCOUNT_CREATED_TOPIC.getTopicName());
+        outbox.setPayloadType(AccountCreatedEvent.class.getName());
+        outbox.setPayload(jsonMapper.writeValueAsString(event));
+        return outbox;
     }
 }

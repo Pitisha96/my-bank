@@ -1,7 +1,7 @@
 package com.pitisha.project.mybank.accountservice.domain.entity;
 
 import static jakarta.persistence.GenerationType.IDENTITY;
-import static java.time.LocalDateTime.now;
+import static java.time.OffsetDateTime.now;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -16,7 +16,7 @@ import lombok.Setter;
 import org.hibernate.annotations.JdbcType;
 import org.hibernate.dialect.type.PostgreSQLJsonPGObjectJsonType;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "accounts_outbox")
@@ -44,7 +44,7 @@ public class AccountOutboxEntity {
     private String payload;
 
     @Column(nullable = false)
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
 
     @PrePersist
     private void onCreate() {
