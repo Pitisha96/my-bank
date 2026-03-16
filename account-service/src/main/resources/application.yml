@@ -34,6 +34,21 @@ spring:
         jwt:
           issuer-uri: ${KEYCLOAK_ISSUER_URI}
 
+  cloud:
+    vault:
+      uri: http://localhost:8200
+      authentication: APPROLE
+      app-role:
+        role-id: ${VAULT_ROLE_ID}
+        secret-id: ${VAULT_SECRET_ID}
+      kv:
+        enabled: true
+        backend: secret
+        default-context: account-service
+
+  config:
+    import: vault://
+
 springdoc:
   api-docs:
     enabled: true
