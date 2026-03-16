@@ -51,8 +51,11 @@ services:
     ports:
       - "8200:8200"
     environment:
-      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_ROOT_TOKEN_ID}
       VAULT_ADDR: "http://127.0.0.1:8200"
+    volumes:
+      - ../vault/config/vault.json:/vault/config/vault.json
+      - ../vault/data:/vault/file
+    command: ["vault", "server", "-config=/vault/config/vault.json"]
     cap_add:
       - IPC_LOCK
     networks:
