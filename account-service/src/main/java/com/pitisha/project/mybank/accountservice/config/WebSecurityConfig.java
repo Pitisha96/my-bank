@@ -17,12 +17,16 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
+import java.util.List;
+import java.util.Map;
+
 @Configuration
 @EnableMethodSecurity
 public class WebSecurityConfig {
 
     private static final String PREFERRED_USERNAME = "preferred_username";
-    private static final String SPRING_SEC_ROLES = "spring_sec_roles";
+    private static final String REALM_ACCESS = "realm_access";
+    private static final String ROLES = "roles";
     private static final String ROLE_PREFIX = "ROLE_";
 
     @Bean
@@ -59,7 +63,8 @@ public class WebSecurityConfig {
         converter.setPrincipalClaimName(PREFERRED_USERNAME);
         converter.setJwtGrantedAuthoritiesConverter(jwt -> {
             final var authorities = new JwtGrantedAuthoritiesConverter().convert(jwt);
-            final var roles = jwt.getClaimAsStringList(SPRING_SEC_ROLES).stream()
+            final Map<String, Object> realmAccess =  jwt.getClaim(REALM_ACCESS);
+            final var roles = ((List<String>) realmAccess.get(ROLES)).stream()
                     .filter(role -> role.startsWith(ROLE_PREFIX))
                     .map(SimpleGrantedAuthority::new)
                     .map(GrantedAuthority.class::cast);
