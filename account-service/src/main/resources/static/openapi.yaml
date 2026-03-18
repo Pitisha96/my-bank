@@ -48,7 +48,7 @@ paths:
             type: number
             format: decimal
             exclusiveMinimum: 0
-            maximum: 999999999999999999.99
+            maximum: 9999999999999999999.99
             example: 100.99
             description: Filtering by account amount (from)
         - name: balanceTo
@@ -58,7 +58,7 @@ paths:
             type: number
             format: decimal
             exclusiveMinimum: 0
-            maximum: 999999999999999999.99
+            maximum: 9999999999999999999.99
             example: 999.99
             description: Filtering by account amount (to)
         - name: status
@@ -72,17 +72,33 @@ paths:
           required: false
           schema:
             type: string
-            format: date
+            format: datetime
             description: Filtering by account creation date (from). Must be past or present
-            example: "2026-02-16"
+            example: "2026-02-16T20:00:00Z"
         - name: createdTo
           in: query
           required: false
           schema:
             type: string
-            format: date
+            format: datetime
             description: Filtering by account creation date (to). Must be past or present
-            example: "2026-02-20"
+            example: "2026-02-20T20:00:00+03:00"
+        - name: updatedFrom
+          in: query
+          required: false
+          schema:
+            type: string
+            format: datetime
+            description: Filtering by account update date (from). Must be past or present
+            example: "2026-02-16T20:00:00Z"
+        - name: updatedTo
+          in: query
+          required: false
+          schema:
+            type: string
+            format: datetime
+            description: Filtering by account update date (to). Must be past or present
+            example: "2026-02-20T20:00:00+03:00"
         - name: page
           in: query
           required: true
@@ -135,7 +151,7 @@ components:
             errorCode: UNAUTHORIZED
             message: Unauthorized
             details: null
-            timestamp: "2026-02-20T11:31:30.2574401"
+            timestamp: 2026-02-20T11:31:30.2574401Z
 
     ForbiddenError:
       description: Returns when the user does not have permissions to the resource.
@@ -147,7 +163,7 @@ components:
             errorCode: FORBIDDEN
             message: Forbidden
             details: null
-            timestamp: 2026-02-20T11:43:10.6274573
+            timestamp: 2026-02-20T11:43:10.6274573Z
 
     ValidationError:
       description: Returns when request param is invalid
@@ -160,7 +176,7 @@ components:
             message: Validation error
             details:
               page: cannot be null
-            timestamp: 2026-02-20T11:31:30.2574401
+            timestamp: 2026-02-20T11:31:30.2574401Z
 
     InternalServerError:
       description: Returns when something went wrong
@@ -172,7 +188,7 @@ components:
             errorCode: INTERNAL_SERVER_ERROR
             message: Internal Server Error
             details: null
-            timestamp: 2026-02-20T11:31:30.2574401
+            timestamp: 2026-02-20T11:31:30.2574401Z
 
   schemas:
     AccountCurrency:
@@ -215,34 +231,43 @@ components:
       type: object
       description: Account info
       required:
+        - id
         - number
         - ownerID
         - currency
         - balance
         - status
         - createdAt
+        - updatedAt
       properties:
-        number:
+        id:
           type: string
           format: uuid
           example: 48724eb5-d10a-4817-9ade-bb84f0001075
-          description: Account id (number)
+          description: Account id
+        number:
+          type: string
+          pattern: '^\d{20}%$"'
+          minLength: 20
+          maxLength: 20
+          example: 40817933000010000001
+          description: Account number
         ownerID:
           type: string
           format: uuid
           example: 375cf951-6467-4b70-b51a-ef0e060f9784
           description: The id of the user who owns this account
-        currency:
-          allOf:
-            - $ref: '#/components/schemas/AccountCurrency'
-          description: The currency in which the funds are held in the account
         balance:
           type: number
           format: decimal
           example: 999.99
           min: 0
-          max: 999999999999999999.99
+          max: 9999999999999999999.99
           description: Account balance
+        currency:
+          allOf:
+            - $ref: '#/components/schemas/AccountCurrency'
+          description: The currency in which the funds are held in the account
         status:
           allOf:
             - $ref: '#/components/schemas/AccountStatus'
@@ -250,8 +275,13 @@ components:
         createdAt:
           type: string
           format: date-time
-          example: 2026-02-16T14:30:00
+          example: 2026-02-16T14:30:00Z
           description: Account creation datetime
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2026-02-16T14:30:00+03:00
+          description: Account update datetime
 
     AccountPageResponse:
       type: object
@@ -317,7 +347,7 @@ components:
           type: string
           format: date-time
           description: Error datetime
-          example: 2026-02-16T14:30:00
+          example: 2026-02-16T14:30:00Z
 
   securitySchemes:
     keycloak:
