@@ -38,7 +38,7 @@ public class AccountController {
 
     private final AccountService accountService;
 
-    @PreAuthorize("hasRole('ADMIN') or (#params.ownerId() != null and #params.ownerId().toString() == principal.claims['sub'])")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('USER') and #params.ownerId() != null and #params.ownerId().toString() == principal.claims['sub'])")
     @GetMapping
     public ResponseEntity<AccountPageResponse> findAccounts(@Validated final AccountFilter params) {
         return ok(accountService.findAll(params));
