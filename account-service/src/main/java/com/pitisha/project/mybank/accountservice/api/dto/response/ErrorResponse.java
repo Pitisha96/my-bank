@@ -5,16 +5,16 @@ import org.springframework.http.HttpStatus;
 import static com.pitisha.project.mybank.accountservice.api.dto.response.ErrorCode.FORBIDDEN;
 import static com.pitisha.project.mybank.accountservice.api.dto.response.ErrorCode.INTERNAL_SERVER_ERROR;
 import static com.pitisha.project.mybank.accountservice.api.dto.response.ErrorCode.UNAUTHORIZED;
-import static java.time.LocalDateTime.now;
+import static java.time.OffsetDateTime.now;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.Map;
 
 public record ErrorResponse(
         ErrorCode errorCode,
         String message,
         Map<String, Object> details,
-        LocalDateTime timestamp
+        OffsetDateTime timestamp
 ) {
 
     public static ErrorResponse of(final ErrorCode errorCode, final String message, final Map<String, Object> details) {

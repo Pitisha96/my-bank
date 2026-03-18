@@ -1,6 +1,5 @@
 package com.pitisha.project.mybank.accountservice.domain.entity.specification;
 
-import static java.time.LocalTime.MAX;
 import static java.util.Objects.nonNull;
 
 import com.pitisha.project.mybank.accountservice.api.dto.request.AccountFilter;
@@ -10,7 +9,7 @@ import com.pitisha.project.mybank.domain.entity.AccountCurrency;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 public class AccountSpecification {
@@ -20,6 +19,7 @@ public class AccountSpecification {
     private static final String BALANCE = "balance";
     private static final String STATUS = "status";
     private static final String CREATED_AT = "createdAt";
+    private static final String UPDATED_AT = "updatedAt";
 
     public static Specification<AccountEntity> withFilter(final AccountFilter filter) {
         Specification<AccountEntity> combinedSpec = (root, query, criteriaBuilder) -> null;
@@ -43,6 +43,12 @@ public class AccountSpecification {
         }
         if (nonNull(filter.createdTo())) {
             combinedSpec = combinedSpec.and(createdAtLessThanOrEquals(filter.createdTo()));
+        }
+        if (nonNull(filter.updatedFrom())) {
+            combinedSpec = combinedSpec.and(updatedAtGreaterThanOrEquals(filter.updatedFrom()));
+        }
+        if (nonNull(filter.updatedTo())) {
+            combinedSpec = combinedSpec.and(updatedAtLessThanOrEquals(filter.updatedTo()));
         }
         return combinedSpec;
     }
@@ -72,13 +78,23 @@ public class AccountSpecification {
                 criteriaBuilder.equal(root.get(STATUS), status.name());
     }
 
-    public static Specification<AccountEntity> createdAtGreaterThanOrEquals(final LocalDate createdAt) {
+    public static Specification<AccountEntity> createdAtGreaterThanOrEquals(final OffsetDateTime createdAt) {
         return (root, query, criteriaBuilder) ->
-                criteriaBuilder.greaterThanOrEqualTo(root.get(CREATED_AT), createdAt.atStartOfDay());
+                criteriaBuilder.greaterThanOrEqualTo(root.get(CREATED_AT), createdAt);
     }
 
-    public static Specification<AccountEntity> createdAtLessThanOrEquals(final LocalDate createdAt) {
+    public static Specification<AccountEntity> createdAtLessThanOrEquals(final OffsetDateTime createdAt) {
         return (root, query, criteriaBuilder) ->
-                criteriaBuilder.lessThanOrEqualTo(root.get(CREATED_AT), createdAt.atTime(MAX));
+                criteriaBuilder.lessThanOrEqualTo(root.get(CREATED_AT), createdAt);
+    }
+
+    public static Specification<AccountEntity> updatedAtGreaterThanOrEquals(final OffsetDateTime updatedAtAt) {
+        return (root, query, criteriaBuilder) ->
+            criteriaBuilder.greaterThanOrEqualTo(root.get(UPDATED_AT), updatedAtAt);
+    }
+
+    public static Specification<AccountEntity> updatedAtLessThanOrEquals(final OffsetDateTime updatedAtAt) {
+        return (root, query, criteriaBuilder) ->
+            criteriaBuilder.lessThanOrEqualTo(root.get(UPDATED_AT), updatedAtAt);
     }
 }
