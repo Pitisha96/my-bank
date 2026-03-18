@@ -18,14 +18,15 @@ import org.junit.jupiter.params.provider.NullSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -34,16 +35,14 @@ import static com.pitisha.project.mybank.accountservice.domain.entity.AccountSta
 import static com.pitisha.project.mybank.accountservice.domain.entity.AccountStatus.BLOCKED;
 import static com.pitisha.project.mybank.domain.entity.AccountCurrency.BYN;
 import static com.pitisha.project.mybank.domain.entity.AccountCurrency.RUB;
-import static java.time.LocalDateTime.now;
+import static java.time.OffsetDateTime.now;
 import static java.time.temporal.ChronoUnit.SECONDS;
 import static java.util.Objects.nonNull;
 import static java.util.UUID.fromString;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
-import static org.hamcrest.Matchers.aMapWithSize;
-import static org.hamcrest.Matchers.hasKey;
-import static org.hamcrest.Matchers.matchesPattern;
-import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -61,29 +60,36 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import({WebSecurityConfig.class, RestAuthenticationEntryPoint.class, RestAccessDeniedHandler.class})
 public class AccountControllerTest {
 
-    private static final String REGEX_FORMAT = "^%s(:00)?$";
     private static final UUID OWNER_ID = fromString("e295fcb3-f60b-474f-b097-58a0d6123795");
-    private static final UUID ACC_1_NUMBER = fromString("a7ca089d-72fb-4319-9c8b-8c71e642acc4");
-    private static final UUID ACC_2_NUMBER = fromString("0acab90c-2ec7-49be-a4c6-6b7ccb8e8f51");
-    private static final LocalDateTime ACC_1_CREATED_AT = LocalDateTime.parse("2026-03-03T00:00:30");
-    private static final LocalDateTime ACC_2_CREATED_AT = LocalDateTime.parse("2026-03-03T23:59:59");
+    private static final UUID ACC_1_ID = fromString("a7ca089d-72fb-4319-9c8b-8c71e642acc4");
+    private static final UUID ACC_2_ID = fromString("0acab90c-2ec7-49be-a4c6-6b7ccb8e8f51");
+    private static final String ACC_1_NUMBER = "40817933000010000001";
+    private static final String ACC_2_NUMBER = "40817810000010000002";
+    private static final OffsetDateTime ACC_1_CREATED_AT = OffsetDateTime.parse("2026-03-03T00:00:00+03:00");
+    private static final OffsetDateTime ACC_2_CREATED_AT = OffsetDateTime.parse("2026-03-03T23:59:59+03:00");
+    private static final OffsetDateTime ACC_1_UPDATED_AT = OffsetDateTime.parse("2026-03-03T23:59:59+03:00");
+    private static final OffsetDateTime ACC_2_UPDATED_AT = OffsetDateTime.parse("2026-03-04T23:00:59+03:00");
 
     private final AccountResponse acc1 = new AccountResponse(
+        ACC_1_ID,
         ACC_1_NUMBER,
         OWNER_ID,
-        BYN,
         new BigDecimal("100.25"),
+        BYN,
         ACTIVE,
-        ACC_1_CREATED_AT
+        ACC_1_CREATED_AT,
+        ACC_1_UPDATED_AT
     );
 
     private final AccountResponse acc2 = new AccountResponse(
+        ACC_2_ID,
         ACC_2_NUMBER,
         OWNER_ID,
-        RUB,
         new BigDecimal("999.99"),
+        RUB,
         BLOCKED,
-        ACC_2_CREATED_AT
+        ACC_2_CREATED_AT,
+        ACC_2_UPDATED_AT
     );
 
     @Autowired
@@ -92,38 +98,57 @@ public class AccountControllerTest {
     @MockitoBean
     private AccountService accountService;
 
-    private static Stream<Arguments> getCurrentLocalDatePlusDay() {
+    private static Stream<Arguments> getCurrentOffsetDateTimePlusOneDay() {
         return Stream.of(
-            Arguments.of(LocalDate.now().plusDays(1).toString())
+            Arguments.of(now().plusDays(1).toString())
         );
     }
 
-    @WithMockUser(roles = "ADMIN")
     @Test
     @DisplayName("[Find accounts] When an user with the role admin searches for accounts then return the account page response")
     public void when_admin_user_searches_for_accounts_then_return_account_page_response() throws Exception {
         when(accountService.findAll(any(AccountFilter.class))).thenReturn(new AccountPageResponse(List.of(acc1, acc2), 1, 0, 50));
-        mockMvc.perform(get("/api/v1/accounts")
+        final String content = mockMvc.perform(get("/api/v1/accounts")
+                .with(jwt()
+                    .jwt(builder -> builder
+                        .claim("sub", OWNER_ID.toString())
+                    )
+                    .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))
+                )
                 .param("page", "0")
                 .param("pageSize", "50")
             )
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data").isArray())
-            .andExpect(jsonPath("$.data[0].number").value(ACC_1_NUMBER.toString()))
+            .andExpect(jsonPath("$.data").value(hasSize(2)))
+            .andExpect(jsonPath("$.data[0].id").value(ACC_1_ID.toString()))
+            .andExpect(jsonPath("$.data[0].number").value(ACC_1_NUMBER))
             .andExpect(jsonPath("$.data[0].ownerId").value(OWNER_ID.toString()))
-            .andExpect(jsonPath("$.data[0].currency").value(BYN.name()))
             .andExpect(jsonPath("$.data[0].balance").value(100.25))
+            .andExpect(jsonPath("$.data[0].currency").value(BYN.name()))
             .andExpect(jsonPath("$.data[0].status").value(ACTIVE.name()))
-            .andExpect(jsonPath("$.data[0].createdAt").value(matchesPattern(REGEX_FORMAT.formatted(ACC_1_CREATED_AT.toString()))))
-            .andExpect(jsonPath("$.data[1].number").value(ACC_2_NUMBER.toString()))
+            .andExpect(jsonPath("$.data[1].id").value(ACC_2_ID.toString()))
+            .andExpect(jsonPath("$.data[1].number").value(ACC_2_NUMBER))
             .andExpect(jsonPath("$.data[1].ownerId").value(OWNER_ID.toString()))
-            .andExpect(jsonPath("$.data[1].currency").value(RUB.name()))
             .andExpect(jsonPath("$.data[1].balance").value(999.99))
+            .andExpect(jsonPath("$.data[1].currency").value(RUB.name()))
             .andExpect(jsonPath("$.data[1].status").value(BLOCKED.name()))
-            .andExpect(jsonPath("$.data[1].createdAt").value(matchesPattern(REGEX_FORMAT.formatted(ACC_2_CREATED_AT.toString()))))
             .andExpect(jsonPath("$.totalPages").value(1))
             .andExpect(jsonPath("$.currentPage").value(0))
-            .andExpect(jsonPath("$.pageSize").value(50));
+            .andExpect(jsonPath("$.pageSize").value(50))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        final String createdAt1 = JsonPath.read(content, "$.data[0].createdAt");
+        final String updatedAt1 = JsonPath.read(content, "$.data[0].updatedAt");
+        final String createdAt2 = JsonPath.read(content, "$.data[1].createdAt");
+        final String updatedAt2 = JsonPath.read(content, "$.data[1].updatedAt");
+
+        assertDoesNotThrow(() -> OffsetDateTime.parse(createdAt1));
+        assertDoesNotThrow(() -> OffsetDateTime.parse(updatedAt1));
+        assertDoesNotThrow(() -> OffsetDateTime.parse(createdAt2));
+        assertDoesNotThrow(() -> OffsetDateTime.parse(updatedAt2));
 
         verify(accountService, times(1)).findAll(any(AccountFilter.class));
     }
@@ -133,11 +158,12 @@ public class AccountControllerTest {
     public void when_user_searches_for_self_accounts_then_return_account_page_response() throws Exception {
         when(accountService.findAll(any(AccountFilter.class))).thenReturn(new AccountPageResponse(List.of(acc1, acc2), 1, 0, 50));
 
-        mockMvc.perform(get("/api/v1/accounts")
-                .with(jwt().jwt(builder -> builder
+        final String content = mockMvc.perform(get("/api/v1/accounts")
+                .with(jwt()
+                    .jwt(builder -> builder
                         .claim("sub", OWNER_ID.toString())
-                        .claim("spring_sec_roles", "ROLE_USER")
                     )
+                    .authorities(new SimpleGrantedAuthority("ROLE_USER"))
                 )
                 .param("ownerId", OWNER_ID.toString())
                 .param("page", "0")
@@ -145,21 +171,36 @@ public class AccountControllerTest {
             )
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data").isArray())
-            .andExpect(jsonPath("$.data[0].number").value(ACC_1_NUMBER.toString()))
+            .andExpect(jsonPath("$.data").value(hasSize(2)))
+            .andExpect(jsonPath("$.data[0].id").value(ACC_1_ID.toString()))
+            .andExpect(jsonPath("$.data[0].number").value(ACC_1_NUMBER))
             .andExpect(jsonPath("$.data[0].ownerId").value(OWNER_ID.toString()))
-            .andExpect(jsonPath("$.data[0].currency").value(BYN.name()))
             .andExpect(jsonPath("$.data[0].balance").value(100.25))
+            .andExpect(jsonPath("$.data[0].currency").value(BYN.name()))
             .andExpect(jsonPath("$.data[0].status").value(ACTIVE.name()))
-            .andExpect(jsonPath("$.data[0].createdAt").value(matchesPattern(REGEX_FORMAT.formatted(ACC_1_CREATED_AT.toString()))))
-            .andExpect(jsonPath("$.data[1].number").value(ACC_2_NUMBER.toString()))
+            .andExpect(jsonPath("$.data[1].id").value(ACC_2_ID.toString()))
+            .andExpect(jsonPath("$.data[1].number").value(ACC_2_NUMBER))
             .andExpect(jsonPath("$.data[1].ownerId").value(OWNER_ID.toString()))
-            .andExpect(jsonPath("$.data[1].currency").value(RUB.name()))
             .andExpect(jsonPath("$.data[1].balance").value(999.99))
+            .andExpect(jsonPath("$.data[1].currency").value(RUB.name()))
             .andExpect(jsonPath("$.data[1].status").value(BLOCKED.name()))
-            .andExpect(jsonPath("$.data[1].createdAt").value(matchesPattern(REGEX_FORMAT.formatted(ACC_2_CREATED_AT.toString()))))
             .andExpect(jsonPath("$.totalPages").value(1))
             .andExpect(jsonPath("$.currentPage").value(0))
-            .andExpect(jsonPath("$.pageSize").value(50));
+            .andExpect(jsonPath("$.pageSize").value(50))
+            .andDo(MockMvcResultHandlers.print())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        final String createdAt1 = JsonPath.read(content, "$.data[0].createdAt");
+        final String updatedAt1 = JsonPath.read(content, "$.data[0].updatedAt");
+        final String createdAt2 = JsonPath.read(content, "$.data[1].createdAt");
+        final String updatedAt2 = JsonPath.read(content, "$.data[1].updatedAt");
+
+        assertDoesNotThrow(() -> OffsetDateTime.parse(createdAt1));
+        assertDoesNotThrow(() -> OffsetDateTime.parse(updatedAt1));
+        assertDoesNotThrow(() -> OffsetDateTime.parse(createdAt2));
+        assertDoesNotThrow(() -> OffsetDateTime.parse(updatedAt2));
 
         verify(accountService, times(1)).findAll(any(AccountFilter.class));
     }
@@ -178,8 +219,10 @@ public class AccountControllerTest {
             .getResponse()
             .getContentAsString();
 
-        final LocalDateTime timestamp = LocalDateTime.parse(JsonPath.parse(content).read("$.timestamp", String.class));
-        assertThat(timestamp).isCloseTo(now(), within(5, SECONDS));
+        final String timestamp = JsonPath.read(content, "$.timestamp");
+        assertDoesNotThrow(() -> OffsetDateTime.parse(timestamp));
+        final OffsetDateTime dateTime = OffsetDateTime.parse(timestamp);
+        assertThat(dateTime).isCloseTo(now(), within(5, SECONDS));
 
         verify(accountService, never()).findAll(any(AccountFilter.class));
     }
@@ -206,8 +249,10 @@ public class AccountControllerTest {
             .getResponse()
             .getContentAsString();
 
-        final LocalDateTime timestamp = LocalDateTime.parse(JsonPath.parse(content).read("$.timestamp", String.class));
-        assertThat(timestamp).isCloseTo(now(), within(5, SECONDS));
+        final String timestamp = JsonPath.read(content, "$.timestamp");
+        assertDoesNotThrow(() -> OffsetDateTime.parse(timestamp));
+        final OffsetDateTime dateTime = OffsetDateTime.parse(timestamp);
+        assertThat(dateTime).isCloseTo(now(), within(5, SECONDS));
 
         verify(accountService, never()).findAll(any(AccountFilter.class));
     }
@@ -238,8 +283,10 @@ public class AccountControllerTest {
             .getResponse()
             .getContentAsString();
 
-        final LocalDateTime timestamp = LocalDateTime.parse(JsonPath.parse(content).read("$.timestamp", String.class));
-        assertThat(timestamp).isCloseTo(now(), within(5, SECONDS));
+        final String timestamp = JsonPath.read(content, "$.timestamp");
+        assertDoesNotThrow(() -> OffsetDateTime.parse(timestamp));
+        final OffsetDateTime dateTime = OffsetDateTime.parse(timestamp);
+        assertThat(dateTime).isCloseTo(now(), within(5, SECONDS));
 
         verify(accountService, never()).findAll(any(AccountFilter.class));
     }
@@ -271,8 +318,10 @@ public class AccountControllerTest {
             .getResponse()
             .getContentAsString();
 
-        final LocalDateTime timestamp = LocalDateTime.parse(JsonPath.parse(content).read("$.timestamp", String.class));
-        assertThat(timestamp).isCloseTo(now(), within(5, SECONDS));
+        final String timestamp = JsonPath.read(content, "$.timestamp");
+        assertDoesNotThrow(() -> OffsetDateTime.parse(timestamp));
+        final OffsetDateTime dateTime = OffsetDateTime.parse(timestamp);
+        assertThat(dateTime).isCloseTo(now(), within(5, SECONDS));
 
         verify(accountService, never()).findAll(any(AccountFilter.class));
     }
@@ -282,7 +331,7 @@ public class AccountControllerTest {
     @CsvSource({
         "-1",
         "test",
-        "1111111111111111111.11",
+        "11111111111111111111.11",
         "11.123"
     })
     @DisplayName("[Find accounts] When balanceFrom query param is invalid then return validation error response")
@@ -303,8 +352,10 @@ public class AccountControllerTest {
             .getResponse()
             .getContentAsString();
 
-        final LocalDateTime timestamp = LocalDateTime.parse(JsonPath.parse(content).read("$.timestamp", String.class));
-        assertThat(timestamp).isCloseTo(now(), within(5, SECONDS));
+        final String timestamp = JsonPath.read(content, "$.timestamp");
+        assertDoesNotThrow(() -> OffsetDateTime.parse(timestamp));
+        final OffsetDateTime dateTime = OffsetDateTime.parse(timestamp);
+        assertThat(dateTime).isCloseTo(now(), within(5, SECONDS));
 
         verify(accountService, never()).findAll(any(AccountFilter.class));
     }
@@ -314,7 +365,7 @@ public class AccountControllerTest {
     @CsvSource({
         "-1",
         "test",
-        "1111111111111111111.11",
+        "11111111111111111111.11",
         "11.123"
     })
     @DisplayName("[Find accounts] When balanceTo query param is invalid then return validation error response")
@@ -335,15 +386,17 @@ public class AccountControllerTest {
             .getResponse()
             .getContentAsString();
 
-        final LocalDateTime timestamp = LocalDateTime.parse(JsonPath.parse(content).read("$.timestamp", String.class));
-        assertThat(timestamp).isCloseTo(now(), within(5, SECONDS));
+        final String timestamp = JsonPath.read(content, "$.timestamp");
+        assertDoesNotThrow(() -> OffsetDateTime.parse(timestamp));
+        final OffsetDateTime dateTime = OffsetDateTime.parse(timestamp);
+        assertThat(dateTime).isCloseTo(now(), within(5, SECONDS));
 
         verify(accountService, never()).findAll(any(AccountFilter.class));
     }
 
     @WithMockUser(roles = "ADMIN")
     @ParameterizedTest
-    @MethodSource("getCurrentLocalDatePlusDay")
+    @MethodSource("getCurrentOffsetDateTimePlusOneDay")
     @CsvSource({
         "test"
     })
@@ -365,15 +418,17 @@ public class AccountControllerTest {
             .getResponse()
             .getContentAsString();
 
-        final LocalDateTime timestamp = LocalDateTime.parse(JsonPath.parse(content).read("$.timestamp", String.class));
-        assertThat(timestamp).isCloseTo(now(), within(5, SECONDS));
+        final String timestamp = JsonPath.read(content, "$.timestamp");
+        assertDoesNotThrow(() -> OffsetDateTime.parse(timestamp));
+        final OffsetDateTime dateTime = OffsetDateTime.parse(timestamp);
+        assertThat(dateTime).isCloseTo(now(), within(5, SECONDS));
 
         verify(accountService, never()).findAll(any(AccountFilter.class));
     }
 
     @WithMockUser(roles = "ADMIN")
     @ParameterizedTest
-    @MethodSource("getCurrentLocalDatePlusDay")
+    @MethodSource("getCurrentOffsetDateTimePlusOneDay")
     @CsvSource({
         "test"
     })
@@ -395,8 +450,74 @@ public class AccountControllerTest {
             .getResponse()
             .getContentAsString();
 
-        final LocalDateTime timestamp = LocalDateTime.parse(JsonPath.parse(content).read("$.timestamp", String.class));
-        assertThat(timestamp).isCloseTo(now(), within(5, SECONDS));
+        final String timestamp = JsonPath.read(content, "$.timestamp");
+        assertDoesNotThrow(() -> OffsetDateTime.parse(timestamp));
+        final OffsetDateTime dateTime = OffsetDateTime.parse(timestamp);
+        assertThat(dateTime).isCloseTo(now(), within(5, SECONDS));
+
+        verify(accountService, never()).findAll(any(AccountFilter.class));
+    }
+
+    @WithMockUser(roles = "ADMIN")
+    @ParameterizedTest
+    @MethodSource("getCurrentOffsetDateTimePlusOneDay")
+    @CsvSource({
+        "test"
+    })
+    @DisplayName("[Find accounts] When updatedFrom query param is invalid then return validation error response")
+    public void when_updatedFrom_query_param_is_invalid_then_return_validation_error(final String date) throws Exception {
+        when(accountService.findAll(any(AccountFilter.class))).thenReturn(new AccountPageResponse(List.of(acc1, acc2), 1, 0, 50));
+
+        final String content = mockMvc.perform(get("/api/v1/accounts")
+                .param("updatedFrom", date)
+                .param("page", "0")
+                .param("pageSize", "50")
+            )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"))
+            .andExpect(jsonPath("$.message").value("Validation error"))
+            .andExpect(jsonPath("$.details").value(aMapWithSize(1)))
+            .andExpect(jsonPath("$.details").value(hasKey("updatedFrom")))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        final String timestamp = JsonPath.read(content, "$.timestamp");
+        assertDoesNotThrow(() -> OffsetDateTime.parse(timestamp));
+        final OffsetDateTime dateTime = OffsetDateTime.parse(timestamp);
+        assertThat(dateTime).isCloseTo(now(), within(5, SECONDS));
+
+        verify(accountService, never()).findAll(any(AccountFilter.class));
+    }
+
+    @WithMockUser(roles = "ADMIN")
+    @ParameterizedTest
+    @MethodSource("getCurrentOffsetDateTimePlusOneDay")
+    @CsvSource({
+        "test"
+    })
+    @DisplayName("[Find accounts] When updatedTo query param is invalid then return validation error response")
+    public void when_updatedTo_query_param_is_invalid_then_return_validation_error(final String date) throws Exception {
+        when(accountService.findAll(any(AccountFilter.class))).thenReturn(new AccountPageResponse(List.of(acc1, acc2), 1, 0, 50));
+
+        final String content = mockMvc.perform(get("/api/v1/accounts")
+                .param("updatedTo", date)
+                .param("page", "0")
+                .param("pageSize", "50")
+            )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"))
+            .andExpect(jsonPath("$.message").value("Validation error"))
+            .andExpect(jsonPath("$.details").value(aMapWithSize(1)))
+            .andExpect(jsonPath("$.details").value(hasKey("updatedTo")))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        final String timestamp = JsonPath.read(content, "$.timestamp");
+        assertDoesNotThrow(() -> OffsetDateTime.parse(timestamp));
+        final OffsetDateTime dateTime = OffsetDateTime.parse(timestamp);
+        assertThat(dateTime).isCloseTo(now(), within(5, SECONDS));
 
         verify(accountService, never()).findAll(any(AccountFilter.class));
     }
@@ -421,8 +542,10 @@ public class AccountControllerTest {
             .getResponse()
             .getContentAsString();
 
-        final LocalDateTime timestamp = LocalDateTime.parse(JsonPath.parse(content).read("$.timestamp", String.class));
-        assertThat(timestamp).isCloseTo(now(), within(5, SECONDS));
+        final String timestamp = JsonPath.read(content, "$.timestamp");
+        assertDoesNotThrow(() -> OffsetDateTime.parse(timestamp));
+        final OffsetDateTime dateTime = OffsetDateTime.parse(timestamp);
+        assertThat(dateTime).isCloseTo(now(), within(5, SECONDS));
 
         verify(accountService, never()).findAll(any(AccountFilter.class));
     }
@@ -447,8 +570,10 @@ public class AccountControllerTest {
             .getResponse()
             .getContentAsString();
 
-        final LocalDateTime timestamp = LocalDateTime.parse(JsonPath.parse(content).read("$.timestamp", String.class));
-        assertThat(timestamp).isCloseTo(now(), within(5, SECONDS));
+        final String timestamp = JsonPath.read(content, "$.timestamp");
+        assertDoesNotThrow(() -> OffsetDateTime.parse(timestamp));
+        final OffsetDateTime dateTime = OffsetDateTime.parse(timestamp);
+        assertThat(dateTime).isCloseTo(now(), within(5, SECONDS));
 
         verify(accountService, never()).findAll(any(AccountFilter.class));
     }
@@ -473,8 +598,10 @@ public class AccountControllerTest {
             .getResponse()
             .getContentAsString();
 
-        final LocalDateTime timestamp = LocalDateTime.parse(JsonPath.parse(content).read("$.timestamp", String.class));
-        assertThat(timestamp).isCloseTo(now(), within(5, SECONDS));
+        final String timestamp = JsonPath.read(content, "$.timestamp");
+        assertDoesNotThrow(() -> OffsetDateTime.parse(timestamp));
+        final OffsetDateTime dateTime = OffsetDateTime.parse(timestamp);
+        assertThat(dateTime).isCloseTo(now(), within(5, SECONDS));
 
         verify(accountService, never()).findAll(any(AccountFilter.class));
     }
@@ -497,8 +624,10 @@ public class AccountControllerTest {
             .getResponse()
             .getContentAsString();
 
-        final LocalDateTime timestamp = LocalDateTime.parse(JsonPath.parse(content).read("$.timestamp", String.class));
-        assertThat(timestamp).isCloseTo(now(), within(5, SECONDS));
+        final String timestamp = JsonPath.read(content, "$.timestamp");
+        assertDoesNotThrow(() -> OffsetDateTime.parse(timestamp));
+        final OffsetDateTime dateTime = OffsetDateTime.parse(timestamp);
+        assertThat(dateTime).isCloseTo(now(), within(5, SECONDS));
 
         verify(accountService, times(1)).findAll(any(AccountFilter.class));
     }
