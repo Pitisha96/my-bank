@@ -139,6 +139,44 @@ paths:
         500:
           $ref: "#/components/responses/InternalServerError"
 
+  /api/v1/accounts/{id}:
+    get:
+      tags:
+        - Accounts
+      summary: Get account by id
+      description: Provides account by id
+      operationId: findAccountById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: 48724eb5-d10a-4817-9ade-bb84f0001075
+            description: Param for find account
+      security:
+        - keycloak:
+            - openid
+      responses:
+        200:
+          description: Getting account has been completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        400:
+          $ref: '#/components/responses/InvalidParameterError'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        403:
+          $ref: '#/components/responses/ForbiddenError'
+        404:
+          $ref: '#/components/responses/ResourceNotFoundError'
+        500:
+          $ref: "#/components/responses/InternalServerError"
+
+
 components:
   responses:
     UnauthorizedError:
@@ -174,8 +212,32 @@ components:
           example:
             errorCode: VALIDATION_ERROR
             message: Validation error
+            details: null
+            timestamp: 2026-02-20T11:31:30.2574401Z
+
+    InvalidParameterError:
+      description: Returns when path param is invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            errorCode: INVALID_PARAMETER
+            message: Parameter 'id' must be of type UUID
             details:
               page: cannot be null
+            timestamp: 2026-02-20T11:31:30.2574401Z
+
+    ResourceNotFoundError:
+      description: Returns when path param is invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            errorCode: RESOURCE_NOT_FOUND
+            message: account with id 48724eb5-d10a-4817-9ade-bb84f0001075 is not defined
+            details: null
             timestamp: 2026-02-20T11:31:30.2574401Z
 
     InternalServerError:
