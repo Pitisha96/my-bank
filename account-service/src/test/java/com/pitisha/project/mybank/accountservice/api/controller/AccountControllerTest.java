@@ -23,11 +23,11 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
-import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -43,6 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -50,6 +51,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -187,7 +189,6 @@ public class AccountControllerTest {
             .andExpect(jsonPath("$.totalPages").value(1))
             .andExpect(jsonPath("$.currentPage").value(0))
             .andExpect(jsonPath("$.pageSize").value(50))
-            .andDo(MockMvcResultHandlers.print())
             .andReturn()
             .getResponse()
             .getContentAsString();
@@ -228,6 +229,36 @@ public class AccountControllerTest {
     }
 
     @Test
+    @DisplayName("[Find accounts] When user without roles searches for accounts then return the forbidden error response")
+    public void when_user_without_roles_searches_for_accounts_then_return_forbidden() throws Exception {
+        when(accountService.findAll(any(AccountFilter.class))).thenReturn(new AccountPageResponse(List.of(acc1, acc2), 1, 0, 50));
+
+        final String content = mockMvc.perform(
+            get("/api/v1/accounts")
+                .param("page", "0")
+                .param("pageSize", "50")
+                .with(jwt().jwt(builder -> builder
+                        .claim("sub", OWNER_ID.toString())
+                    )
+                )
+            )
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.errorCode").value("FORBIDDEN"))
+            .andExpect(jsonPath("$.message").value("Forbidden"))
+            .andExpect(jsonPath("$.details").value(nullValue()))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        final String timestamp = JsonPath.read(content, "$.timestamp");
+        assertDoesNotThrow(() -> OffsetDateTime.parse(timestamp));
+        final OffsetDateTime dateTime = OffsetDateTime.parse(timestamp);
+        assertThat(dateTime).isCloseTo(now(), within(5, SECONDS));
+
+        verify(accountService, never()).findAll(any(AccountFilter.class));
+    }
+
+    @Test
     @DisplayName("[Find accounts] When an user with the role user searches for other users' accounts then return forbidden error response")
     public void when_user_searches_for_other_users_accounts_then_return_forbidden() throws Exception {
         when(accountService.findAll(any(AccountFilter.class))).thenReturn(new AccountPageResponse(List.of(acc1, acc2), 1, 0, 50));
@@ -235,8 +266,8 @@ public class AccountControllerTest {
         final String content = mockMvc.perform(get("/api/v1/accounts")
             .with(jwt().jwt(builder -> builder
                     .claim("sub", OWNER_ID.toString())
-                    .claim("spring_sec_roles", "ROLE_USER")
                 )
+                .authorities(new SimpleGrantedAuthority("ROLE_USER"))
             )
             .param("ownerId", "18d22d43-d73c-451d-b5ba-073006adb9a4")
             .param("page", "0")
@@ -630,5 +661,208 @@ public class AccountControllerTest {
         assertThat(dateTime).isCloseTo(now(), within(5, SECONDS));
 
         verify(accountService, times(1)).findAll(any(AccountFilter.class));
+    }
+
+    @Test
+    @DisplayName("[Find by id] When user with role admin find account by then return account response")
+    public void when_admin_find_by_id_then_return_account_response() throws Exception {
+        when(accountService.findById(any(UUID.class))).thenReturn(Optional.of(acc1));
+
+        String content = mockMvc.perform(get("/api/v1/accounts/{id}", ACC_1_ID)
+                .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+            )
+            .andExpect(status().isOk())
+            .andExpect(header().exists("Content-Type"))
+            .andExpect(header().string("Content-Type", "application/json"))
+            .andExpect(jsonPath("$.id").value(ACC_1_ID.toString()))
+            .andExpect(jsonPath("$.number").value(ACC_1_NUMBER))
+            .andExpect(jsonPath("$.ownerId").value(OWNER_ID.toString()))
+            .andExpect(jsonPath("$.balance").value(100.25))
+            .andExpect(jsonPath("$.currency").value(BYN.name()))
+            .andExpect(jsonPath("$.status").value(ACTIVE.name()))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        final String createdAt = JsonPath.read(content, "$.createdAt");
+        final String updatedAt = JsonPath.read(content, "$.updatedAt");
+
+        assertDoesNotThrow(() -> OffsetDateTime.parse(createdAt));
+        assertDoesNotThrow(() -> OffsetDateTime.parse(updatedAt));
+        assertEquals(ACC_1_CREATED_AT, OffsetDateTime.parse(createdAt));
+        assertEquals(ACC_1_UPDATED_AT, OffsetDateTime.parse(updatedAt));
+
+        verify(accountService, times(1)).findById(any(UUID.class));
+    }
+
+    @Test
+    @DisplayName("[Find by id] When user with role user find self account by id then return account response")
+    public void when_user_find_self_account_by_id_then_return_account_response() throws Exception {
+        when(accountService.findById(any(UUID.class))).thenReturn(Optional.of(acc1));
+
+        String content = mockMvc.perform(get("/api/v1/accounts/{id}", ACC_1_ID)
+                .with(jwt().jwt(builder -> builder
+                            .claim("sub", OWNER_ID.toString())
+                        )
+                    .authorities(new SimpleGrantedAuthority("ROLE_USER"))
+                )
+            )
+            .andExpect(status().isOk())
+            .andExpect(header().exists("Content-Type"))
+            .andExpect(header().string("Content-Type", "application/json"))
+            .andExpect(jsonPath("$.id").value(ACC_1_ID.toString()))
+            .andExpect(jsonPath("$.number").value(ACC_1_NUMBER))
+            .andExpect(jsonPath("$.ownerId").value(OWNER_ID.toString()))
+            .andExpect(jsonPath("$.balance").value(100.25))
+            .andExpect(jsonPath("$.currency").value(BYN.name()))
+            .andExpect(jsonPath("$.status").value(ACTIVE.name()))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        final String createdAt = JsonPath.read(content, "$.createdAt");
+        final String updatedAt = JsonPath.read(content, "$.updatedAt");
+
+        assertDoesNotThrow(() -> OffsetDateTime.parse(createdAt));
+        assertDoesNotThrow(() -> OffsetDateTime.parse(updatedAt));
+        assertEquals(ACC_1_CREATED_AT, OffsetDateTime.parse(createdAt));
+        assertEquals(ACC_1_UPDATED_AT, OffsetDateTime.parse(updatedAt));
+
+        verify(accountService, times(1)).findById(any(UUID.class));
+    }
+
+    @Test
+    @DisplayName("[Find by id] When anonymous user find account by id then return unauthorized")
+    public void when_anonymous_user_find_account_by_id_then_return_unauthorized() throws Exception {
+        when(accountService.findById(any(UUID.class))).thenReturn(Optional.of(acc1));
+
+        String content = mockMvc.perform(get("/api/v1/accounts/{id}", ACC_1_ID)
+            )
+            .andExpect(status().isUnauthorized())
+            .andExpect(header().exists("Content-Type"))
+            .andExpect(header().string("Content-Type", "application/json"))
+            .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"))
+            .andExpect(jsonPath("$.message").value("Unauthorized"))
+            .andExpect(jsonPath("$.details").value(nullValue()))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        final String timestamp = JsonPath.read(content, "$.timestamp");
+        assertDoesNotThrow(() -> OffsetDateTime.parse(timestamp));
+        final OffsetDateTime dateTime = OffsetDateTime.parse(timestamp);
+        assertThat(dateTime).isCloseTo(now(), within(5, SECONDS));
+
+        verify(accountService, never()).findById(any(UUID.class));
+    }
+
+    @Test
+    @DisplayName("[Find by id] When user without roles find account by id then return forbidden")
+    public void when_user_without_roles_find_account_by_id_then_return_forbidden() throws Exception {
+        when(accountService.findById(any(UUID.class))).thenReturn(Optional.of(acc1));
+
+        String content = mockMvc.perform(
+            get("/api/v1/accounts/{id}", ACC_1_ID)
+                .with(jwt().jwt(builder -> builder
+                    .claim("sub", OWNER_ID.toString())
+                ))
+            )
+            .andExpect(status().isForbidden())
+            .andExpect(header().exists("Content-Type"))
+            .andExpect(header().string("Content-Type", "application/json"))
+            .andExpect(jsonPath("$.errorCode").value("FORBIDDEN"))
+            .andExpect(jsonPath("$.message").value("Forbidden"))
+            .andExpect(jsonPath("$.details").value(nullValue()))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        final String timestamp = JsonPath.read(content, "$.timestamp");
+        assertDoesNotThrow(() -> OffsetDateTime.parse(timestamp));
+        final OffsetDateTime dateTime = OffsetDateTime.parse(timestamp);
+        assertThat(dateTime).isCloseTo(now(), within(5, SECONDS));
+
+        verify(accountService, never()).findById(any(UUID.class));
+    }
+
+    @Test
+    @DisplayName("[Find by id] When user with role user find other's account by id then return forbidden")
+    public void when_user_find_others_account_by_id_then_return_forbidden() throws Exception {
+        when(accountService.findById(any(UUID.class))).thenReturn(Optional.of(acc1));
+
+        String content = mockMvc.perform(
+            get("/api/v1/accounts/{id}", ACC_1_ID)
+                .with(jwt().jwt(builder -> builder
+                    .claim("sub", "5314dbe2-f6a7-4d50-a426-13d8f518477e")
+                )
+                        .authorities(new SimpleGrantedAuthority("ROLE_USER"))
+                )
+            )
+            .andExpect(status().isForbidden())
+            .andExpect(header().exists("Content-Type"))
+            .andExpect(header().string("Content-Type", "application/json"))
+            .andExpect(jsonPath("$.errorCode").value("FORBIDDEN"))
+            .andExpect(jsonPath("$.message").value("Forbidden"))
+            .andExpect(jsonPath("$.details").value(nullValue()))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        final String timestamp = JsonPath.read(content, "$.timestamp");
+        assertDoesNotThrow(() -> OffsetDateTime.parse(timestamp));
+        final OffsetDateTime dateTime = OffsetDateTime.parse(timestamp);
+        assertThat(dateTime).isCloseTo(now(), within(5, SECONDS));
+
+        verify(accountService, times(1)).findById(any(UUID.class));
+    }
+
+    @WithMockUser(roles = "ADMIN")
+    @Test
+    @DisplayName("[Find by id] When user finds undefined account by id then return resource not found")
+    public void when_user_finds_undefined_account_by_id_then_return_resource_not_found() throws Exception {
+        when(accountService.findById(any(UUID.class))).thenReturn(Optional.empty());
+
+        String content = mockMvc.perform(get("/api/v1/accounts/{id}", ACC_1_ID))
+            .andExpect(status().isNotFound())
+            .andExpect(header().exists("Content-Type"))
+            .andExpect(header().string("Content-Type", "application/json"))
+            .andExpect(jsonPath("$.errorCode").value("RESOURCE_NOT_FOUND"))
+            .andExpect(jsonPath("$.message").value("account with id " + ACC_1_ID + " is not defined"))
+            .andExpect(jsonPath("$.details").value(nullValue()))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        final String timestamp = JsonPath.read(content, "$.timestamp");
+        assertDoesNotThrow(() -> OffsetDateTime.parse(timestamp));
+        final OffsetDateTime dateTime = OffsetDateTime.parse(timestamp);
+        assertThat(dateTime).isCloseTo(now(), within(5, SECONDS));
+
+        verify(accountService, times(1)).findById(any(UUID.class));
+    }
+
+    @WithMockUser(roles = "ADMIN")
+    @Test
+    @DisplayName("[Find by id] When user finds account by invalid id then return bad request")
+    public void when_user_finds_account_by_invalid_id_then_return_bad_request() throws Exception {
+        when(accountService.findById(any(UUID.class))).thenReturn(Optional.of(acc1));
+
+        String content = mockMvc.perform(get("/api/v1/accounts/{id}", "test"))
+            .andExpect(status().isBadRequest())
+            .andExpect(header().exists("Content-Type"))
+            .andExpect(header().string("Content-Type", "application/json"))
+            .andExpect(jsonPath("$.errorCode").value("INVALID_PARAMETER"))
+            .andExpect(jsonPath("$.message").value("Parameter 'id' must be of type UUID"))
+            .andExpect(jsonPath("$.details").value(nullValue()))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        final String timestamp = JsonPath.read(content, "$.timestamp");
+        assertDoesNotThrow(() -> OffsetDateTime.parse(timestamp));
+        final OffsetDateTime dateTime = OffsetDateTime.parse(timestamp);
+        assertThat(dateTime).isCloseTo(now(), within(5, SECONDS));
+
+        verify(accountService, never()).findById(any(UUID.class));
     }
 }
