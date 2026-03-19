@@ -9,6 +9,7 @@ import com.pitisha.project.mybank.accountservice.domain.exception.ResourceNotFou
 import com.pitisha.project.mybank.accountservice.domain.service.AccountService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -44,7 +45,8 @@ public class AccountController {
         return ok(accountService.findAll(params));
     }
 
-    @PreAuthorize("hasRole('ADMIN') or (#result.ownerId().toString() == principal.claims['sub'])")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @PostAuthorize("hasRole('ADMIN') or (hasRole('USER') and returnObject.ownerId() != null and returnObject.ownerId().toString() == principal.claims['sub'])")
     @GetMapping("/{id}")
     @ResponseStatus(OK)
     public AccountResponse findAccountById(@PathVariable final UUID id) {
