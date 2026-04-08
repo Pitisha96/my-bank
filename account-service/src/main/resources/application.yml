@@ -59,5 +59,12 @@ springdoc:
       client-id: ${ACCOUNT_SERVICE_SWAGGER_CLIENT_ID}
       use-pkce-with-authorization-code-grant: true
 
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
 app:
   bik: ${BIK}
